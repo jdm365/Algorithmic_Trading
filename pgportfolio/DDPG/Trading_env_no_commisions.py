@@ -1,11 +1,9 @@
 import numpy as np
 import torch as T
 import torch.nn.functional as F
-import sys
 import os
 from utils import *
-sys.path.append('/Users/jakemehlman/Desktop/Algorithmic_Trading/pgportfolio/Market_Data/')
-from Finnhub import GetTrainData
+from pgportfolio.Market_Data.Finnhub import GetTrainData
 
 
 class DataFeatures:
@@ -64,18 +62,7 @@ class TradingEnv:
         self.time_step = BATCH_SIZE 
         self.N_ASSETS = len(self.price_features[0,1:,0])
         self.TIME_STEPS = len(self.price_features[0,0,:]) - BATCH_SIZE
-        self.features = DataFeatures(self.date)
-        
-        ## Observation = (X[t], w[t-1]) # only include w[t-1] when commisions are factored in
-        ## action => from agent
-            ## agent => action = w[t]; dims = {1 + num_stocks}
-        ## env.step(action) = new_state, reward, done
-        ## obs = env.reset() when done episode
-            ## env.reset() => choose new batch data from (t=batch_size, t=time_steps-batch_size)
-        ## new_state => (X[t+1] [deterministic], w[t]); 
-        ## immediate reward = r[t]/tf = ln(dot(y[t],w[t-1])/tf
-        ## n_actions = discrete actions taken in one time step. Will either be num_stocks+1 or just 1
-            ## if networks are run independently.                                                       
+        self.features = DataFeatures(self.date)                                                 
 
     def step(self, action, last_action, train_batch_window):
         # Create current price tensor and next price tensor
@@ -101,7 +88,7 @@ class TradingEnv:
     def reset(self, time_step):
         self.time_step = time_step
         state = DataFeatures(self.date).computePriceTensor(self.time_step)
-        last_action = np.random.rand(12,1) #Random initialization for exploration
+        last_action = np.random.rand(12,1) #Random initialization for exploration; minimally effective; see soft-actor critic
         last_action = np.exp(last_action) / np.sum(np.exp(last_action), axis=0)
 
         return state.detach().numpy(), last_action

@@ -1,5 +1,4 @@
 import os
-import sys
 import torch as T
 from torch.autograd import Variable
 import torch.nn as nn
@@ -7,8 +6,6 @@ import torch.optim as optim
 import torch.nn.functional as F
 import numpy as np
 from ActorCritic_FullyConvolutionalNew import ReplayBuffer, ActorNetwork, CriticNetwork
-sys.path.append('/Users/jakemehlman/Desktop/Algorithmic_Trading/pgportfolio/ddpg_files/')
-from noise import OUActionNoise
 from Trading_env_no_commisions import TradingEnv, DataFeatures
 from utils import *
 
@@ -17,8 +14,6 @@ class Agent(object):
         gamma=.99, tau=.01, max_memory_size=50000):
         self.gamma = gamma
         self.tau = tau
-
-        #self.noise = OUActionNoise(mu=np.zeros(env.N_ASSETS + 1))
 
         self.actor = ActorNetwork(alpha=alpha, cl1_dims=cl1_dims, cl2_dims=cl2_dims, n_actions=env.N_ASSETS, 
             lookback_window=env.batch_size, name='Actor')
@@ -45,8 +40,6 @@ class Agent(object):
         state = Variable(T.from_numpy(state).float().unsqueeze(0))[0]
         last_action = Variable(T.from_numpy(last_action).float().unsqueeze(0))
         action = self.actor.forward(state, last_action) # Added last_action
-        #noisy_action = action + T.reshape(T.tensor(self.noise(), dtype=T.float), action.shape).to(self.actor.device)
-        #action = nn.Softmax(dim=2)(noisy_action) # Asset dimension
         action = action.detach().numpy()[0,0]
         return action
 

@@ -6,6 +6,7 @@ import torch as T
 BATCH_SIZE = 64
 MINUTE = 60
 HALF_HOUR = MINUTE*30
+PATH = '/Users/jakemehlman/'
 
 def plotLearning(scores, filename, x=None, window=5):   
     N = len(scores)

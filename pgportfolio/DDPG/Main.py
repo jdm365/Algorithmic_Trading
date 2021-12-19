@@ -1,8 +1,6 @@
-import sys
 import random
 import torch as T
 from Agent_FullyConvolutionalNew import Agent
-sys.path.append('/Users/jakemehlman/Desktop/Algorithmic_Trading/pgportfolio/ddpg_files/')
 from Trading_env_no_commisions import DataFeatures, TradingEnv
 import numpy as np
 from utils import *

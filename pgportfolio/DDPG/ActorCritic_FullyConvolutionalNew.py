@@ -1,5 +1,4 @@
 import os
-import sys
 import torch as T
 import torch.nn as nn
 import torch.optim as optim
@@ -8,20 +7,19 @@ import numpy as np
 from collections import deque
 import itertools
 import random
-sys.path.append('/Users/jakemehlman/Desktop/Algorithmic_Trading/pgportfolio/ddpg_files/')
 from utils import *
 
 class ActorNetwork(nn.Module):
-    def __init__(self, alpha, cl1_dims, cl2_dims, n_actions, lookback_window, name, chkpt_dir='trained_models'):
+    def __init__(self, alpha, cl1_dims, cl2_dims, n_actions, lookback_window, name, chkpt_dir='trained_models_algo_trade'):
         super(ActorNetwork, self).__init__()
         self.cl1_dims = cl1_dims
         self.cl2_dims = cl2_dims
         self.N_ASSETS = n_actions
         try:
-            os.mkdir(os.path.join('/Users/jakemehlman/Desktop/Algorithmic_Trading/pgportfolio/NewAttempt/', chkpt_dir))
-            self.checkpoint_file = os.path.join(os.mkdir(os.path.join('/Users/jakemehlman/Desktop/Algorithmic_Trading/pgportfolio/NewAttempt/', chkpt_dir)), name + '_ddpg')
+            os.mkdir(os.path.join(PATH, chkpt_dir))
+            self.checkpoint_file = os.path.join(os.mkdir(os.path.join(PATH, chkpt_dir)), name + '_ddpg')
         except OSError as error:
-            self.checkpoint_file = os.path.join(os.path.join('/Users/jakemehlman/Desktop/Algorithmic_Trading/pgportfolio/NewAttempt/', chkpt_dir), name + '_ddpg')
+            self.checkpoint_file = os.path.join(os.path.join(PATH, chkpt_dir), name + '_ddpg')
         
         self.cl1 = nn.Conv2d(in_channels=3, out_channels=self.cl1_dims, kernel_size=(1,3))
         self.bn1 = nn.BatchNorm2d(self.cl1_dims)
@@ -58,16 +56,16 @@ class ActorNetwork(nn.Module):
 
 
 class CriticNetwork(nn.Module):
-    def __init__(self, beta, cl1_dims, cl2_dims, n_actions, lookback_window, name, chkpt_dir='trained_models'):
+    def __init__(self, beta, cl1_dims, cl2_dims, n_actions, lookback_window, name, chkpt_dir='trained_models_algo_trade'):
         super(CriticNetwork, self).__init__()
         self.cl1_dims = cl1_dims
         self.cl2_dims = cl2_dims
         self.N_ASSETS = n_actions
         try:
-            os.mkdir(os.path.join('/Users/jakemehlman/Desktop/Algorithmic_Trading/pgportfolio/NewAttempt/', chkpt_dir))
-            self.checkpoint_file = os.path.join(os.mkdir(os.path.join('/Users/jakemehlman/Desktop/Algorithmic_Trading/pgportfolio/NewAttempt/', chkpt_dir)), name + '_ddpg')
+            os.mkdir(os.path.join(PATH, chkpt_dir))
+            self.checkpoint_file = os.path.join(os.mkdir(os.path.join(PATH, chkpt_dir)), name + '_ddpg')
         except OSError as error:
-            self.checkpoint_file = os.path.join(os.path.join('/Users/jakemehlman/Desktop/Algorithmic_Trading/pgportfolio/NewAttempt/', chkpt_dir), name + '_ddpg')
+            self.checkpoint_file = os.path.join(os.path.join(PATH, chkpt_dir), name + '_ddpg')
         
         self.cl1 = nn.Conv2d(in_channels=3, out_channels=self.cl1_dims, kernel_size=(1,3))
         self.bn1 = nn.BatchNorm2d(self.cl1_dims)
@@ -85,10 +83,10 @@ class CriticNetwork(nn.Module):
 
     def forward(self, observation, last_action, action):
         state_value = F.relu(self.bn1(self.cl1(observation)))
-        state_value = F.relu(self.bn2(self.cl2(state_value))) # [1, 20, 11, 1]
+        state_value = F.relu(self.bn2(self.cl2(state_value)))
 
         last_action = last_action[:, 1:, 0].reshape(len(observation[:,0,0,0]), 1, self.N_ASSETS, 1)
-        state_value = T.cat((last_action, state_value), dim=1) # Add last_action; [1, 21, 11, 1]
+        state_value = T.cat((last_action, state_value), dim=1) # Add last_action
         
         action = T.reshape(T.flatten(action)[64:], (len(observation[:,0,0,0]), 1, self.N_ASSETS, 1))
         action_value = F.relu(self.action_value(action))
