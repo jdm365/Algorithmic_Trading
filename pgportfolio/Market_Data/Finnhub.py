@@ -16,7 +16,7 @@ class CreateTrainData:
         self.tickers = tickers
         self.From = From
         self.To = To
-        self.parent_directory = '/Users/jakemehlman/Algorithmic_Trading/pgportfolio/Market_Data/'
+        self.parent_directory = '/Users/jakemehlman/Algorithmic_Trading/pgportfolio/Market_Data/Train_Data/'
         try:
             os.mkdir(os.path.join(self.parent_directory, str(datetime.date.today())))
             self.train_directory = os.mkdir(os.path.join(self.parent_directory, str(datetime.date.today())))
@@ -59,8 +59,8 @@ class CreateTrainData:
             print('...saving %s' % ticker)
             _DF['Ticker'] = ticker
             _DF.set_index('Ticker', inplace=True)
-            _DF = _DF[['c', 'h', 'l', 't']]
-            _DF.rename(columns={"c": "Close", "h": "High", 'l': 'Low',
+            _DF = _DF[['v', 'c', 'h', 'l', 't']]
+            _DF.rename(columns={'v': 'Volume', "c": "Close", "h": "High", 'l': 'Low',
                             't': 'Time'}, inplace=True)
             _DF.to_csv('%s/%s.csv' % (self.returns_directory, ticker))
             DFs.append(_DF)
@@ -83,12 +83,12 @@ class CreateTrainData:
 
     def constructGlobalPriceTensor(self):
         self.DFs = self.makeDF()
-        P = T.zeros(3, len(self.DFs), self.time_steps, dtype=T.float32)
+        P = T.zeros(4, len(self.DFs), self.time_steps, dtype=T.float32)
         for i in range(len(self.DFs)):
             stock = self.DFs[i]
-            price_data = np.array(stock[['Close', 'High', 'Low']])
+            price_data = np.array(stock[['Volume', 'Close', 'High', 'Low']])
             # (features, coins, training window)
-            P[:,i,:] = T.reshape(T.tensor(price_data, dtype=T.float32), (3, self.time_steps))
+            P[:,i,:] = T.reshape(T.tensor(price_data, dtype=T.float32), (4, self.time_steps))
         Z = T.ones(size=(len(P[:,0,0]), 1, len(P[0,0,:])), dtype=T.float32)
         self.P = T.cat((Z, P), dim=1)
         return self.P
@@ -104,7 +104,7 @@ class CreateTrainData:
 class GetTrainData:
     def __init__(self, date):
         self.date = date    
-        self.parent_directory = '/Users/jakemehlman/Algorithmic_Trading/pgportfolio/Market_Data/'
+        self.parent_directory = '/Users/jakemehlman/Algorithmic_Trading/pgportfolio/Market_Data/Train_Data/'
 
     def loadTrainData(self):
         P = T.load('%s/%s/Train_Data.pt' % (self.parent_directory, self.date))
@@ -117,11 +117,10 @@ class CreateTestData:
         self.From = From
         self.To = To
         self.tickers = tickers
-        self.parent_directory = '/Users/jakemehlman/Desktop/Algorithmic_Trading/pgportfolio/Market_Data/Test_Data/'
+        self.parent_directory = '/Users/jakemehlman/Algorithmic_Trading/pgportfolio/Market_Data/Test_Data/'
         try:
             os.mkdir(os.path.join(self.parent_directory, str(datetime.date.today())))
             self.train_directory = os.mkdir(os.path.join(self.parent_directory, str(datetime.date.today())))
-            print('Success!')
         except OSError as error:
             self.train_directory = os.path.join(self.parent_directory, str(datetime.date.today()))
     
@@ -161,8 +160,8 @@ class CreateTestData:
             print('...saving %s' % ticker)
             _DF['Ticker'] = ticker
             _DF.set_index('Ticker', inplace=True)
-            _DF = _DF[['c', 'h', 'l', 't']]
-            _DF.rename(columns={"c": "Close", "h": "High", 'l': 'Low',
+            _DF = _DF[['v', 'c', 'h', 'l', 't']]
+            _DF.rename(columns={'v': 'Volume', "c": "Close", "h": "High", 'l': 'Low',
                             't': 'Time'}, inplace=True)
             _DF.to_csv('%s/%s.csv' % (self.returns_directory, ticker))
             DFs.append(_DF)
@@ -185,12 +184,12 @@ class CreateTestData:
 
     def constructGlobalPriceTensor(self):
         self.DFs = self.makeDF()
-        P = T.zeros(3, len(self.DFs), self.time_steps, dtype=T.float32)
+        P = T.zeros(4, len(self.DFs), self.time_steps, dtype=T.float32)
         for i in range(len(self.DFs)):
             stock = self.DFs[i]
-            price_data = np.array(stock[['Close', 'High', 'Low']])
+            price_data = np.array(stock[['Volume', 'Close', 'High', 'Low']])
             # (features, coins, training window)
-            P[:,i,:] = T.reshape(T.tensor(price_data, dtype=T.float32), (3, self.time_steps))
+            P[:,i,:] = T.reshape(T.tensor(price_data, dtype=T.float32), (4, self.time_steps))
         Z = T.ones(size=(len(P[:,0,0]), 1, len(P[0,0,:])), dtype=T.float32)
         self.P = T.cat((Z, P), dim=1)
         return self.P
@@ -206,7 +205,7 @@ class CreateTestData:
 class GetTestData:
     def __init__(self, date):
         self.date = date    
-        self.parent_directory = '/Users/jakemehlman/Desktop/Algorithmic_Trading/pgportfolio/Market_Data/Test_Data'
+        self.parent_directory = '/Users/jakemehlman/Algorithmic_Trading/pgportfolio/Market_Data/Test_Data/'
     
     def loadTrainData(self):
         P = T.load('%s/%s/Test_Data.pt' % (self.parent_directory, self.date))
@@ -222,7 +221,6 @@ if __name__ == '__main__':
 
     train_data = CreateTrainData(tickers=Tickers, From='2021-02-01', To='2021-12-01')
     train_data.saveGlobalPriceTensor()
-
 
     #test_data = CreateTestData(tickers=Tickers, From='2020-08-01', To='2020-12-01')
     #test_data.saveGlobalPriceTensor()

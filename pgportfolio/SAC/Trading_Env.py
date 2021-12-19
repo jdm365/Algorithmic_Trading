@@ -41,11 +41,15 @@ class DataFeatures:
         return mu_
 
     def computePriceTensor(self, time_step):
-        X_ = T.zeros(size=(3, self.N_ASSETS, self.batch_size), dtype=T.float32)
-        closes_ = T.flatten(self.price_features[0, 1:, time_step+2]).cpu().detach().numpy()
+        X_ = T.zeros(size=(4, self.N_ASSETS, self.batch_size), dtype=T.float32)
+        closes_ = T.flatten(self.price_features[1, 1:, time_step+2]).cpu().detach().numpy()
+        volume_closes_ = T.flatten(self.price_features[0, 1:, time_step+2]).cpu().detach().numpy()
 
         for idx, close_ in enumerate(closes_):
-            X_[:, idx, :] = self.price_features[:, 1 + idx, (time_step + 2 - self.batch_size): time_step + 2] / close_
+            X_[1:, idx, :] = self.price_features[1:, 1 + idx, (time_step + 2 - self.batch_size): time_step + 2] / close_
+        
+        for idx, volume_close_ in enumerate(volume_closes_):
+            X_[0, idx, :] = self.price_features[0, 1 + idx, (time_step + 2 - self.batch_size): time_step + 2] / volume_close_
 
         X_ = T.reshape(X_, (1, *X_.size()))
         
@@ -86,9 +90,9 @@ class TradingEnv:
         return T.dot(T.flatten(self.y[:, :, self.time_step]), T.flatten(T.tensor(buy_and_hold_action, dtype=T.float32))).detach().numpy()
 
     def reset(self, time_step):
-        self.time_step = time_step
+        self.time_step = time_step + self.batch_size - 1
         state = DataFeatures(self.date).computePriceTensor(self.time_step)
-        last_action = np.random.rand(12,1) #Random initialization for exploration; minimally effective; see soft-actor critic
+        last_action = np.random.rand(12,1) #Random initialization for exploration
         last_action = np.exp(last_action) / np.sum(np.exp(last_action), axis=0)
 
         return state.detach().numpy(), last_action
