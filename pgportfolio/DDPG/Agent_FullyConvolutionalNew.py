@@ -30,6 +30,8 @@ class Agent(object):
         for target_param, param in zip(self.target_critic.parameters(), self.critic.parameters()):
             target_param.data.copy_(param.data)
 
+        self.updateNetworkParameters(tau=1)
+
         # Train
         self.memory = ReplayBuffer(max_memory_size)
         self.critic_criterion = nn.MSELoss()
@@ -75,12 +77,29 @@ class Agent(object):
         critic_loss.backward()
         self.critic_optimizer.step()
     
+        self.updateNetworkParameters()
+
+    def updateNetworkParameters(self, tau=None):
+        if tau is None:
+            tau = self.tau
+
+        actor_state_dict = self.actor.state_dict()
+        critic_state_dict = self.critic.state_dict()
+        target_actor_state_dict = self.target_actor.state_dict()
+        target_critic_state_dict = self.target_critic.state_dict()
+
         # update target networks
-        for target_param, param in zip(self.target_actor.parameters(), self.actor.parameters()):
-            target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
-        
-        for target_param, param in zip(self.target_critic.parameters(), self.critic.parameters()):
-            target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
+        for name in critic_state_dict:
+            critic_state_dict[name] = tau*critic_state_dict[name].clone() + \
+                (1-tau)*target_critic_state_dict[name].clone()
+
+        self.target_critic.load_state_dict(critic_state_dict)
+
+        for name in actor_state_dict:
+            actor_state_dict[name] = tau*actor_state_dict[name].clone() + \
+                (1-tau)*target_actor_state_dict[name].clone()
+
+        self.target_actor.load_state_dict(actor_state_dict)
 
     def save_models(self):
         self.actor.save_checkpoint()
