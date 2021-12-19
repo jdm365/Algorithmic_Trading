@@ -1,4 +1,4 @@
-from config import *
+from pgportfolio.Market_Data.config import *
 import requests
 import pandas as pd
 import numpy as np
@@ -8,9 +8,7 @@ import datetime
 import os
 import csv
 import time
-import sys
-sys.path.append('/Users/jakemehlman/Desktop/Algorithmic_Trading/pgportfolio/ddpg_files')
-from utils import *
+from pgportfolio.DDPG.utils import *
 
 
 class CreateTrainData:
