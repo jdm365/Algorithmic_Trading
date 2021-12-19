@@ -30,7 +30,7 @@ class Agent(object):
         for target_param, param in zip(self.target_critic.parameters(), self.critic.parameters()):
             target_param.data.copy_(param.data)
 
-        self.updateNetworkParameters(tau=1)
+        self.update_network_parameters(tau=1)
 
         # Train
         self.memory = ReplayBuffer(max_memory_size)
@@ -77,9 +77,9 @@ class Agent(object):
         critic_loss.backward()
         self.critic_optimizer.step()
     
-        self.updateNetworkParameters()
+        self.update_network_parameters()
 
-    def updateNetworkParameters(self, tau=None):
+    def update_network_parameters(self, tau=None):
         if tau is None:
             tau = self.tau
 

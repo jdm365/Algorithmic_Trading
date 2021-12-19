@@ -16,7 +16,7 @@ class CreateTrainData:
         self.tickers = tickers
         self.From = From
         self.To = To
-        self.parent_directory = '/Users/jakemehlman/Desktop/Algorithmic_Trading/pgportfolio/Market_Data/Train_Data'
+        self.parent_directory = '/Users/jakemehlman/Algorithmic_Trading/pgportfolio/Market_Data/'
         try:
             os.mkdir(os.path.join(self.parent_directory, str(datetime.date.today())))
             self.train_directory = os.mkdir(os.path.join(self.parent_directory, str(datetime.date.today())))
@@ -38,7 +38,7 @@ class CreateTrainData:
             done=False
             while not done:
                 params = {
-                    'token': 'c6s3ioiad3ifcngbahgg',
+                    'token': API_KEY_FINNHUB,
                     'symbol': ticker,
                     'resolution': '30',
                     'from': FROM_,
@@ -104,13 +104,12 @@ class CreateTrainData:
 class GetTrainData:
     def __init__(self, date):
         self.date = date    
-        self.parent_directory = '/Users/jakemehlman/Desktop/Algorithmic_Trading/pgportfolio/Market_Data/Train_Data'
-    
+        self.parent_directory = '/Users/jakemehlman/Algorithmic_Trading/pgportfolio/Market_Data/'
+
     def loadTrainData(self):
         P = T.load('%s/%s/Train_Data.pt' % (self.parent_directory, self.date))
         y = T.load('%s/%s/Train_priceChangeVectors.pt' % (self.parent_directory, self.date))
         return P, y
-
 
 
 class CreateTestData:
@@ -213,3 +212,17 @@ class GetTestData:
         P = T.load('%s/%s/Test_Data.pt' % (self.parent_directory, self.date))
         y = T.load('%s/%s/Test_priceChangeVectors.pt' % (self.parent_directory, self.date))
         return P, y
+
+
+
+if __name__ == '__main__':
+    Tickers =  ['BINANCE:BTCUSDT', 'BINANCE:ETHUSDT', 'BINANCE:LTCUSDT', 'BINANCE:ADAUSDT', 
+    'BINANCE:XRPUSDT', 'BINANCE:BCHUSDT', 'BINANCE:DOGEUSDT', 'BINANCE:BNBUSDT', 
+    'BINANCE:MATICUSDT', 'BINANCE:XMRUSDT', 'BINANCE:SOLUSDT']
+
+    train_data = CreateTrainData(tickers=Tickers, From='2021-02-01', To='2021-12-01')
+    train_data.saveGlobalPriceTensor()
+
+
+    #test_data = CreateTestData(tickers=Tickers, From='2020-08-01', To='2020-12-01')
+    #test_data.saveGlobalPriceTensor()
