@@ -46,10 +46,10 @@ class DataFeatures:
         volume_closes_ = T.flatten(self.price_features[0, 1:, time_step+2]).cpu().detach().numpy()
 
         for idx, close_ in enumerate(closes_):
-            X_[1:, idx, :] = self.price_features[1:, 1 + idx, (time_step + 2 - self.batch_size): time_step + 2] / close_
+            X_[1:, idx, :] = self.price_features[1:, 1 + idx, (time_step + 1 - self.batch_size): time_step + 1] / close_
         
         for idx, volume_close_ in enumerate(volume_closes_):
-            X_[0, idx, :] = self.price_features[0, 1 + idx, (time_step + 2 - self.batch_size): time_step + 2] / volume_close_
+            X_[0, idx, :] = self.price_features[0, 1 + idx, (time_step + 1 - self.batch_size): time_step + 1] / volume_close_
 
         X_ = T.reshape(X_, (1, *X_.size()))
         
