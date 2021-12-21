@@ -11,7 +11,7 @@ from pgportfolio.DDPG.utils import *
 
 class Agent():
     def __init__(self, env, alpha, beta, cl1_dims=3, cl2_dims=22, 
-        gamma=.99, tau=.01, max_memory_size=50000, reward_scale=2):
+        gamma=.99, tau=.005, max_memory_size=50000, reward_scale=2):
         self.gamma = gamma
         self.tau = tau
         self.memory = ReplayBuffer(max_memory_size)
@@ -42,58 +42,58 @@ class Agent():
 
         actions, _ = self.actor.sample_normal(state, last_action, reparameterize=False)
 
-        return actions.cpu().detach().numpy()[0,0]
+        return actions.clone().detach().numpy()[0,0]
 
     def update(self, train_length):
         if self.memory.__len__() < self.batch_size:
             return
-        
-        states, last_actions, actions, rewards, next_states, dones = self.memory.sample_buffer(self.batch_size)
-        states = T.tensor(states, dtype=T.float32, requires_grad=True).to(self.critic_1.device)
-        last_actions = T.tensor(last_actions, dtype=T.float32, requires_grad=True).to(self.critic_1.device)
-        actions = T.tensor(actions, dtype=T.float32, requires_grad=True).to(self.critic_1.device)
+        T.autograd.set_detect_anomaly(True)
+
+        state, last_action, action, reward, next_state, _ = self.memory.sample_buffer(self.batch_size)
+        state = T.squeeze(T.tensor(state, dtype=T.float32, requires_grad=True)).to(self.critic_1.device)
+        last_action = T.tensor(last_action, dtype=T.float32, requires_grad=True).to(self.critic_1.device)
+        action = T.tensor(action, dtype=T.float32, requires_grad=True).to(self.critic_1.device)
         # Make sure rewards are discounted for batch_length
-        rewards = T.tensor([reward * train_length / self.batch_size for reward in rewards], dtype=T.float32, requires_grad=True).to(self.critic_1.device)
-        next_states = T.tensor(next_states, dtype=T.float32, requires_grad=True).to(self.critic_1.device)
-        dones = T.tensor(dones, dtype=T.float32).to(self.critic_1.device)
+        reward = T.tensor([rwrd * train_length / self.batch_size for rwrd in reward], dtype=T.float32, requires_grad=True).to(self.critic_1.device)
+        next_state = T.squeeze(T.tensor(next_state, dtype=T.float32, requires_grad=True)).to(self.critic_1.device)
 
-        values = self.value(states, last_actions)
-        target_values = self.target_value(next_states, actions)
-        target_values[dones] = 0.0
+        value = self.value(state, last_action)
+        target_value = self.target_value(next_state, action)
 
-        actions, log_probs = self.actor.sample_normal(states, reparameterize=False)
-        q1_new_policy = self.critic_1.forward(states, last_actions, actions)
-        q2_new_policy = self.critic_2.forward(states, last_actions, actions)
+        actions, log_probs = self.actor.sample_normal(state, last_action, reparameterize=False)
+        q1_new_policy = self.critic_1.forward(state, last_action, actions)
+        q2_new_policy = self.critic_2.forward(state, last_action, actions)
         critic_value = T.min(q1_new_policy, q2_new_policy)
 
-        self.value.optimizer.zero_grad()
         value_target = critic_value - log_probs # Different from target_value (network)
-        value_loss = .5 * F.mse_loss(values, value_target)
-        value_loss.backward(retain_graph=True)
-        self.value.optimizer.step()
+        value_loss = .5 * F.mse_loss(value, value_target)
 
-        actions, log_probs = self.actor.sample_normal(states, last_actions, reparameterize=True)
-        q1_new_policy = self.critic_1.forward(states, last_actions, actions)
-        q2_new_policy = self.critic_2.forward(states, last_actions, actions)
+        actions, log_probs = self.actor.sample_normal(state, last_action, reparameterize=True)
+        q1_new_policy = self.critic_1.forward(state, last_action, actions)
+        q2_new_policy = self.critic_2.forward(state, last_action, actions)
         critic_value = T.min(q1_new_policy, q2_new_policy)
-
         actor_loss = T.mean(log_probs - critic_value)
-        self.actor.optimizer.zero_grad()
-        actor_loss.backward(retain_graph=True)
-        self.actor.optimizer.step()
 
-        q_hat = self.scale * rewards + self.gamma * target_values
-        q1_old_policy = self.critic_1.forward(states, last_actions, actions)
-        q2_old_policy = self.critic_2.forward(states, last_actions, actions)
+        q_hat = self.scale * T.reshape(reward, (64, 1, 1, 1)) + self.gamma * target_value
+        q1_old_policy = self.critic_1.forward(state, last_action, actions)
+        q2_old_policy = self.critic_2.forward(state, last_action, actions)
         critic_1_loss = .5 * F.mse_loss(q1_old_policy, q_hat)
         critic_2_loss = .5 * F.mse_loss(q2_old_policy, q_hat)
+        critic_loss = critic_1_loss + critic_2_loss
 
+        self.actor.optimizer.zero_grad()
         self.critic_1.optimizer.zero_grad()
         self.critic_2.optimizer.zero_grad()
-        critic_loss = critic_1_loss + critic_2_loss
-        critic_loss.backward()
+        self.value.optimizer.zero_grad()
+    
+        actor_loss.backward(retain_graph=True)
+        critic_loss.backward(retain_graph=True)
+        value_loss.backward(retain_graph=True)
+
+        self.actor.optimizer.step()
         self.critic_1.optimizer.step()
         self.critic_2.optimizer.step()
+        self.value.optimizer.step()
         
         self.update_network_parameters()
 

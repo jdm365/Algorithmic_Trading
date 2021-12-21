@@ -69,7 +69,7 @@ class ActorNetwork(nn.Module):
         action = softmax(actions).to(self.device)
         log_probs = probabilities.log_prob(actions)
         log_probs -= T.log(1-action.pow(2) + self.reparam_noise)
-        log_probs = log_probs.sum(1, keepdim=True)
+        log_probs = T.sum(log_probs, 2, keepdim=True)
 
         return action, log_probs
 
@@ -101,7 +101,7 @@ class ValueNetwork(nn.Module):
 
         self.v = nn.Conv2d(in_channels=self.cl2_dims+1, out_channels=1, kernel_size=1)
 
-        self.cash_bias = T.ones(1, 1, 1, 1)
+        #self.cash_bias = T.ones(1, 1, 1, 1)
 
         self.optimizer = optim.Adam(self.parameters(), lr=beta)
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
@@ -117,9 +117,9 @@ class ValueNetwork(nn.Module):
 
         value = self.v(state_value)
 
-        self.cash_bias = T.ones(len(observation[:,0,0,0]), 1, 1, 1) * self.cash_bias
+        #self.cash_bias = T.ones(len(observation[:,0,0,0]), 1, 1, 1) * self.cash_bias
         
-        value = T.cat((self.cash_bias, value), dim=2)
+        value = T.sum(value, 2, keepdim=True)
 
         return value
 
@@ -152,7 +152,7 @@ class CriticNetwork(nn.Module):
         self.action_value = nn.Conv2d(in_channels=1, out_channels=self.cl2_dims+1, kernel_size=1)
         self.q = nn.Conv2d(in_channels=self.cl2_dims+1, out_channels=1, kernel_size=1)
 
-        self.cash_bias = T.ones(1, 1, 1, 1)
+        #self.cash_bias = T.ones(1, 1, 1, 1)
 
         self.optimizer = optim.Adam(self.parameters(), lr=beta)
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
@@ -171,9 +171,9 @@ class CriticNetwork(nn.Module):
         state_action_value = F.relu(T.add(state_value, action_value))
         state_action_value = self.q(state_action_value)
 
-        self.cash_bias = T.ones(len(observation[:,0,0,0]), 1, 1, 1) * self.cash_bias
+        #self.cash_bias = T.ones(len(observation[:,0,0,0]), 1, 1, 1) * self.cash_bias
         
-        state_action_value = T.cat((self.cash_bias, state_action_value), dim=2)
+        state_action_value = T.sum(state_action_value, 2, keepdim=True)
 
         return state_action_value
 
@@ -199,11 +199,9 @@ class ReplayBuffer(object):
         i = random.randint(0, self.__len__() - batch_size)
         batch = list(itertools.islice(self.buffer, i, i + batch_size))
         # Sample recent events more often
-        sample_bias = 5e-3
+        sample_bias = 5e-5
         k = np.random.geometric(p=sample_bias, size=1)[0]
-        i = int(self.__len__() + 1 - k - batch_size)
-        if i + batch_size > self.__len__() or i + batch_size < 0:
-            i = self.__len__()
+        i = max([random.randint(0, self.__len__() - batch_size), (self.__len__() + 1 - k - batch_size)])
         batch = list(itertools.islice(self.buffer, i, i + batch_size))
 
         for experience in batch:
