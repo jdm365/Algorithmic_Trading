@@ -42,14 +42,17 @@ class DataFeatures:
 
     def computePriceTensor(self, time_step):
         X_ = T.zeros(size=(4, self.N_ASSETS, self.batch_size), dtype=T.float32)
-        closes_ = T.flatten(self.price_features[1, 1:, time_step+2]).cpu().detach().numpy()
-        volume_closes_ = T.flatten(self.price_features[0, 1:, time_step+2]).cpu().detach().numpy()
-
+        closes_ = T.flatten(self.price_features[1, 1:, time_step+1]).cpu().detach().numpy()
+        volume_closes_ = T.flatten(self.price_features[0, 1:, time_step+1]).cpu().detach().numpy()
+        
         for idx, close_ in enumerate(closes_):
             X_[1:, idx, :] = self.price_features[1:, 1 + idx, (time_step + 1 - self.batch_size): time_step + 1] / close_
         
         for idx, volume_close_ in enumerate(volume_closes_):
-            X_[0, idx, :] = self.price_features[0, 1 + idx, (time_step + 1 - self.batch_size): time_step + 1] / volume_close_
+            if volume_close_ != 0:
+                X_[0, idx, :] = self.price_features[0, 1 + idx, (time_step + 1 - self.batch_size): time_step + 1] / volume_close_
+            else:
+                X_[0, idx, :] = self.price_features[0, 1 + idx, (time_step + 1 - self.batch_size): time_step + 1] / 1 # Handling zero volume condition
 
         X_ = T.reshape(X_, (1, *X_.size()))
         
@@ -68,7 +71,7 @@ class TradingEnv:
         self.TIME_STEPS = len(self.price_features[0,0,:]) - BATCH_SIZE
         self.features = DataFeatures(self.date)                                                 
 
-    def step(self, action, last_action, train_batch_window):
+    def step(self, action, last_action, time_initial, train_batch_window):
         # Create current price tensor and next price tensor
         X_ = self.features.computePriceTensor(self.time_step)
 
@@ -76,14 +79,14 @@ class TradingEnv:
         action = T.tensor(action, dtype=T.float32)
         last_action = T.tensor(last_action, dtype=T.float32)
         mu = self.features.calculateCommisionsFactor(self.time_step, action, last_action)
-        reward = T.log(mu * T.dot(T.flatten(self.y[:, :, self.time_step]), T.flatten(last_action))) / train_batch_window
+        reward = T.log(mu * T.dot(T.flatten(self.y[:, :, self.time_step]), T.flatten(last_action)))
         done = False
-        if self.time_step == self.TIME_STEPS - 1:
+        if self.time_step == time_initial + train_batch_window - 1:
             done = True
 
         self.time_step += 1
         last_action = action
-
+        
         return X_.detach().numpy(), last_action.detach().numpy(), reward.detach().numpy(), done # Added last action
 
     def buyAndHoldReturns(self, buy_and_hold_action):

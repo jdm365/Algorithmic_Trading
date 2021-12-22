@@ -70,7 +70,7 @@ class ActorNetwork(nn.Module):
         log_probs = probabilities.log_prob(actions)
         log_probs -= T.log(1-action.pow(2) + self.reparam_noise)
         log_probs = T.sum(log_probs, 2, keepdim=True)
-
+        print(action.shape, log_probs.shape)
         return action, log_probs
 
     def save_checkpoint(self):
@@ -196,8 +196,6 @@ class ReplayBuffer(object):
         (state_batch, last_action_batch, action_batch, reward_batch, next_state_batch, 
             done_batch) = ([], [], [], [], [], [])
         
-        i = random.randint(0, self.__len__() - batch_size)
-        batch = list(itertools.islice(self.buffer, i, i + batch_size))
         # Sample recent events more often
         sample_bias = 5e-5
         k = np.random.geometric(p=sample_bias, size=1)[0]

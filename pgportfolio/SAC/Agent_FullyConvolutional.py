@@ -41,24 +41,25 @@ class Agent():
         last_action = Variable(T.from_numpy(last_action).float().unsqueeze(0))
 
         actions, _ = self.actor.sample_normal(state, last_action, reparameterize=False)
-
+        print(actions.clone().detach().numpy()[0,0])
         return actions.clone().detach().numpy()[0,0]
 
     def update(self, train_length):
         if self.memory.__len__() < self.batch_size:
             return
-        T.autograd.set_detect_anomaly(True)
 
-        state, last_action, action, reward, next_state, _ = self.memory.sample_buffer(self.batch_size)
+        state, last_action, action, reward, next_state, done = self.memory.sample_buffer(self.batch_size)
         state = T.squeeze(T.tensor(state, dtype=T.float32, requires_grad=True)).to(self.critic_1.device)
         last_action = T.tensor(last_action, dtype=T.float32, requires_grad=True).to(self.critic_1.device)
         action = T.tensor(action, dtype=T.float32, requires_grad=True).to(self.critic_1.device)
         # Make sure rewards are discounted for batch_length
-        reward = T.tensor([rwrd * train_length / self.batch_size for rwrd in reward], dtype=T.float32, requires_grad=True).to(self.critic_1.device)
+        reward = T.tensor([rwrd / self.batch_size for rwrd in reward], dtype=T.float32, requires_grad=True).to(self.critic_1.device)
         next_state = T.squeeze(T.tensor(next_state, dtype=T.float32, requires_grad=True)).to(self.critic_1.device)
+        done = T.tensor(done, dtype=T.bool).to(self.critic_1.device)
 
         value = self.value(state, last_action)
         target_value = self.target_value(next_state, action)
+        target_value[done] = 0.0
 
         actions, log_probs = self.actor.sample_normal(state, last_action, reparameterize=False)
         q1_new_policy = self.critic_1.forward(state, last_action, actions)
@@ -74,7 +75,7 @@ class Agent():
         critic_value = T.min(q1_new_policy, q2_new_policy)
         actor_loss = T.mean(log_probs - critic_value)
 
-        q_hat = self.scale * T.reshape(reward, (64, 1, 1, 1)) + self.gamma * target_value
+        q_hat = self.scale * T.reshape(reward, (self.batch_size, 1, 1, 1)) + self.gamma * target_value
         q1_old_policy = self.critic_1.forward(state, last_action, actions)
         q2_old_policy = self.critic_2.forward(state, last_action, actions)
         critic_1_loss = .5 * F.mse_loss(q1_old_policy, q_hat)
@@ -85,10 +86,10 @@ class Agent():
         self.critic_1.optimizer.zero_grad()
         self.critic_2.optimizer.zero_grad()
         self.value.optimizer.zero_grad()
-    
+
         actor_loss.backward(retain_graph=True)
         critic_loss.backward(retain_graph=True)
-        value_loss.backward(retain_graph=True)
+        value_loss.backward()
 
         self.actor.optimizer.step()
         self.critic_1.optimizer.step()
