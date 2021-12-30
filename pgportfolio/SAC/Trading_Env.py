@@ -27,7 +27,7 @@ class DataFeatures:
 
     def calculateCommisionsFactor(self, time_step, action, last_action):
         delta = 5e-3
-        c_factor = .0025
+        c_factor = .0025 # Commision factor 0 now!
         done = False
         action = action.detach().clone()
         w_prime = self.calculateWPrime(time_step, last_action).detach().clone()[0]
@@ -79,7 +79,7 @@ class TradingEnv:
         action = T.tensor(action, dtype=T.float32)
         last_action = T.tensor(last_action, dtype=T.float32)
         mu = self.features.calculateCommisionsFactor(self.time_step, action, last_action)
-        reward = T.log(mu * T.dot(T.flatten(self.y[:, :, self.time_step]), T.flatten(last_action)))
+        reward = T.log(mu * T.dot(T.flatten(self.y[:, :, self.time_step]), T.flatten(last_action))) / train_batch_window
         done = False
         if self.time_step == time_initial + train_batch_window - 1:
             done = True
@@ -101,4 +101,9 @@ class TradingEnv:
         return state.detach().numpy(), last_action
 
 
-        
+if __name__ == '__main__':
+    test = DataFeatures('2021-12-19')
+    Price_Tensors = []
+    for step in range(test.batch_size, test.TIME_STEPS):
+        Price_Tensors.append(test.computePriceTensor(step))
+    print(len(Price_Tensors))

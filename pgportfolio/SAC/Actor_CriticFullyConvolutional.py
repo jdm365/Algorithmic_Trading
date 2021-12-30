@@ -70,7 +70,6 @@ class ActorNetwork(nn.Module):
         log_probs = probabilities.log_prob(actions)
         log_probs -= T.log(1-action.pow(2) + self.reparam_noise)
         log_probs = T.sum(log_probs, 2, keepdim=True)
-        print(action.shape, log_probs.shape)
         return action, log_probs
 
     def save_checkpoint(self):
@@ -101,8 +100,6 @@ class ValueNetwork(nn.Module):
 
         self.v = nn.Conv2d(in_channels=self.cl2_dims+1, out_channels=1, kernel_size=1)
 
-        #self.cash_bias = T.ones(1, 1, 1, 1)
-
         self.optimizer = optim.Adam(self.parameters(), lr=beta)
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
 
@@ -116,8 +113,6 @@ class ValueNetwork(nn.Module):
         state_value = T.cat((last_action, state_value), dim=1) # Add last_action
 
         value = self.v(state_value)
-
-        #self.cash_bias = T.ones(len(observation[:,0,0,0]), 1, 1, 1) * self.cash_bias
         
         value = T.sum(value, 2, keepdim=True)
 
@@ -152,8 +147,6 @@ class CriticNetwork(nn.Module):
         self.action_value = nn.Conv2d(in_channels=1, out_channels=self.cl2_dims+1, kernel_size=1)
         self.q = nn.Conv2d(in_channels=self.cl2_dims+1, out_channels=1, kernel_size=1)
 
-        #self.cash_bias = T.ones(1, 1, 1, 1)
-
         self.optimizer = optim.Adam(self.parameters(), lr=beta)
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
 
@@ -164,15 +157,12 @@ class CriticNetwork(nn.Module):
         state_value = F.relu(self.bn2(self.cl2(state_value)))
 
         last_action = last_action[:, 1:, 0].reshape(len(observation[:,0,0,0]), 1, self.N_ASSETS, 1)
+        action = T.reshape(action[:, 0, 1:, 0], (len(observation[:,0,0,0]), 1, self.N_ASSETS, 1))
         state_value = T.cat((last_action, state_value), dim=1) # Add last_action
-        
-        action = T.reshape(T.flatten(action)[64:], (len(observation[:,0,0,0]), 1, self.N_ASSETS, 1))
         action_value = F.relu(self.action_value(action))
         state_action_value = F.relu(T.add(state_value, action_value))
         state_action_value = self.q(state_action_value)
 
-        #self.cash_bias = T.ones(len(observation[:,0,0,0]), 1, 1, 1) * self.cash_bias
-        
         state_action_value = T.sum(state_action_value, 2, keepdim=True)
 
         return state_action_value

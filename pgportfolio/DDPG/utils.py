@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import torch as T
 
 
-BATCH_SIZE = 64
+BATCH_SIZE = 100
 MINUTE = 60
 HALF_HOUR = MINUTE*30
 PATH = '/Users/jakemehlman/'
