@@ -4,6 +4,8 @@ import numpy as np
 import torch as T
 import requests
 import os
+from STEMGNN.config import API_KEY_TWELVE
+import config
 
 
 class CreateData:
@@ -21,7 +23,7 @@ class CreateData:
         for ticker in self.tickers:
             _df = pd.DataFrame()
             params = {
-                'apikey': '9dc69f38005c441c8186a293754d682e',
+                'apikey': API_KEY_TWELVE,
                 'symbol': ticker,
                 'interval': '30min',
                 'start_date': self.From,
