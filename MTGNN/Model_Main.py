@@ -275,3 +275,174 @@ class MTGNNLayer(nn.Module):
         X = X + X_residual[:, :, :, -X.size(3):]
         X = self._normalization(X, idx)
         return X, X_skip
+
+
+class MTGNN(nn.Module):
+    def __init__(
+        self,
+        gcn_true,
+        build_adj,
+        gcn_depth,
+        num_nodes,
+        kernel_set,
+        kernel_size,
+        dropout,
+        subgraph_size,
+        node_dim,
+        dilation_exponential,
+        conv_channels,
+        residual_channels,
+        skip_channels,
+        end_channels,
+        seq_length,
+        in_dim,
+        out_dim,
+        layers,
+        propalpha,
+        tanhalpha,
+        layer_norm_affine,
+        xd=None
+    ):
+        super(MTGNN, self).__init__()
+        self._gcn_true = gcn_true
+        self._num_nodes = num_nodes
+        self._dropout = dropout
+        self._seq_length = seq_length
+        self._layers = layers
+        self._idx = T.arange(self._num_nodes)
+
+        self._mtgnn_layers = nn.ModuleList()
+
+        self._graph_constructor = GraphConstructor(
+            num_nodes, subgraph_size, node_dim, alpha=tanhalpha, xd=xd
+        )
+        self._set_receptive_field(dilation_exponential, kernel_size, layers)
+
+        new_dilation = 1
+        for j in range(1, layers + 1):
+            self._mtgnn_layers.append(
+                MTGNNLayer(
+                    dilation_exponential=dilation_exponential,
+                    rf_size_i=1,
+                    kernel_size=kernel_size,
+                    j=j,
+                    residual_channels=residual_channels,
+                    conv_channels=conv_channels,
+                    skip_channels=skip_channels,
+                    kernel_set=kernel_set,
+                    new_dilation=new_dilation,
+                    layer_norm_affine=layer_norm_affine,
+                    gcn_true=gcn_true,
+                    seq_length=seq_length,
+                    receptive_field=self._receptive_field,
+                    droput=dropout,
+                    gcn_depth=gcn_depth,
+                    num_nodes=num_nodes,
+                    propalpha=propalpha
+                )
+            )
+
+            new_dilation *= dilation_exponential
+        
+        self._setup_conv(
+            in_dim, skip_channels, end_channels, residual_channels, out_dim
+        )
+
+        self._reset_parameters()
+
+    def _setup_conv(
+        self, in_dim, skip_channels, end_channels, residual_channels, out_dim
+    ):
+
+        self._start_conv = nn.Conv2d(
+            in_channels=in_dim, out_channels=residual_channels, kernel_size=(1, 1)
+        )
+
+        if self._seq_length > self._receptive_field:
+
+            self._skip_conv_0 = nn.Conv2d(
+                in_channels=in_dim,
+                out_channels=skip_channels,
+                kernel_size=(1, self._seq_length),
+                bias=True
+            )
+
+            self._skip_conv_E = nn.Conv2d(
+                in_channels=residual_channels,
+                out_channels=skip_channels,
+                kernel_size=(1, self._seq_length - self._receptive_field + 1),
+                bias=True
+            )
+        
+        else:
+            self._skip_conv_0 = nn.Conv2d(
+                in_channels=in_dim,
+                out_channels=skip_channels,
+                kernel_size=(1, self._receptive_field),
+                bias=True
+            )
+
+            self._skip_conv_E = nn.Conv2d(
+                in_channels=skip_channels,
+                out_channels=end_channels,
+                kernel_size=(1, 1),
+                bias=True
+            )
+
+        self._end_conv_1 = nn.Conv2d(
+            in_channels=skip_channels,
+            out_channels=end_channels,
+            kernel_size=(1, 1),
+            bias=True
+        )
+
+    def _reset_parameters(self):
+        for param in self.parameteres():
+            if param.dim() > 1:
+                nn.init.xavier_uniform_(param)
+            else:
+                nn.init.uniform_(param)
+
+    def _receptive_field(self, dilation_exponential, kernel_size, layers):
+        if dilation_exponential > 1:
+            self._receptive_field = int(1 + (kernel_size - 1) * dilation_exponential ** 
+                layers - 1) / (dilation_exponential - 1)
+        else:
+            self._receptive_field = layers * (kernel_size - 1) + 1
+
+    def forward(self, X_in, A_tilde=None, idx=None, FE=None):
+        seq_len = X_in.size(3)
+        assert (
+            seq_len == self._seq_length
+        ), 'Input sequence length no equal to preset sequence length.'
+
+        if self._seq_length < self._receptive_field:
+            X_in = F.pad(
+                X_in, (self._receptive_field - self._seq_length, 0, 0, 0)
+            )
+
+        if self._gcn_true:
+            if self._build_adj_true:
+                if idx is None:
+                    A_tilde = self._graph_constructor(self._idx.to(X_in.device), FE=FE)
+                else:
+                    A_tilde = self._graph_constructor(idx, FE=FE)
+        
+        X = self._start_conv(X_in)
+        X_skip = self._skip_conv_0(
+            F.dropout(X_in, self._dropout, training=self.training)
+        )
+        if idx is None:
+            for mtgnn in self._mtgnn_layers:
+                X, X_skip = mtgnn(
+                    X, X_skip, A_tilde, self._idx.to(X_in.device), self.training
+                )
+        else:
+            for mtgnn in self._mtgnn_layers:
+                X, X_skip = mtgnn(X, X_skip, A_tilde, idx, self.training)
+
+        X_skip = self._skip_conv_E(X) + X_skip
+        X = F.relu(X_skip)
+        X = F.relu(self._end_conv_1(X))
+        X = self._end_conv_2(X)
+        return X
