@@ -54,14 +54,23 @@ class CreateData:
         return self.filename
 
     def makeTensorData(self, filename=None):
+        TensorFilename = 'Stocks_Data/TensorDataFile.pt'
         if filename is not None:
-            data = pd.read_csv(filename)
+            data = pd.read_csv(filename, index_col=0)
+            data.iloc[:, 1:] = data.iloc[:, 1:].astype(float)
         else:
             data = self.makeDF()
-        
+            data.iloc[:, 1:] = data.iloc[:, 1:].astype(float)
+
+        Tensor = T.zeros(4, len(self.tickers), len(data.iloc[1:, 1]) + 1)
+        for idx, col in enumerate(data.columns):
+            print(idx//4)
+            Tensor[(idx+4)%4, (idx//4), :] = T.tensor(data.iloc[1:, idx] / data.iloc[:-1, idx])
+
+        T.save(Tensor, TensorFilename)
 
 if __name__ == '__main__':
     TICKERS = ['AAPL', 'INTC', 'NFLX', 'GOOG', 'GSPC', 'NIO', 'AMD', 'F', 'MU', 'NVDA', 
         'TSLA', 'UBER', 'PTON', 'XOM']
     data = CreateData(tickers=TICKERS, From='2021-01-01', To='2021-12-01')
-    data.makeDF()
+    data.makeTensorData(data.filename)
