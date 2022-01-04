@@ -12,8 +12,13 @@ class CreateData:
         self.tickers = tickers
         self.From = From
         self.To = To
-        if not os.path.exists('Stocks_Data'):
-            os.makedirs('Stocks_Data')
+        try:
+            os.chdir('/Users/jakemehlman/Algorithmic_Trading/')
+            if not os.path.exists('Stocks_Data'):
+                os.makedirs('Stocks_Data')
+        except FileNotFoundError:
+            print("Can't find file")
+
         self.filename = os.path.join('Stocks_Data', 'Stocks_Data_Test.csv')
     
     def makeDF(self):
@@ -54,6 +59,7 @@ class CreateData:
         return self.filename
 
     def makeTensorData(self, filename=None):
+        ### X_out - (feature_dims, stock_dims, time_steps)
         TensorFilename = 'Stocks_Data/TensorDataFile.pt'
         if filename is not None:
             data = pd.read_csv(filename, index_col=0)
@@ -62,12 +68,14 @@ class CreateData:
             data = self.makeDF()
             data.iloc[:, 1:] = data.iloc[:, 1:].astype(float)
 
-        Tensor = T.zeros(4, len(self.tickers), len(data.iloc[1:, 1]) + 1)
+        Tensor = T.zeros(4, len(self.tickers), len(data.iloc[1:, 1]))
         for idx, col in enumerate(data.columns):
-            print(idx//4)
-            Tensor[(idx+4)%4, (idx//4), :] = T.tensor(data.iloc[1:, idx] / data.iloc[:-1, idx])
+            Tensor[(idx+4)%4, (idx//4), :] = T.tensor(np.array(data.iloc[1:, idx]) / np.array(data.iloc[:-1, idx]))
 
         T.save(Tensor, TensorFilename)
+
+
+
 
 if __name__ == '__main__':
     TICKERS = ['AAPL', 'INTC', 'NFLX', 'GOOG', 'GSPC', 'NIO', 'AMD', 'F', 'MU', 'NVDA', 
