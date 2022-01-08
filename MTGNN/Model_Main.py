@@ -17,7 +17,7 @@ class Linear(nn.Module):
         self._reset_parameters()
 
     def _reset_parameters(self):
-        for param in self.parameteres():
+        for param in self.parameters():
             if param.dim() > 1:
                 nn.init.xavier_uniform_(param)
             else:
@@ -38,7 +38,7 @@ class MixProp(nn.Module):
         self._reset_parameters()
 
     def _reset_parameters(self):
-        for param in self.parameteres():
+        for param in self.parameters():
             if param.dim() > 1:
                 nn.init.xavier_uniform_(param)
             else:
@@ -61,7 +61,7 @@ class MixProp(nn.Module):
 
 class DilatedInception(nn.Module):
     def __init__(self, c_in, c_out, kernel_set, dilation_factor):
-        super(DilatedInception, self).__init()
+        super(DilatedInception, self).__init__()
         self._time_conv = nn.ModuleList()
         self._kernel_set = kernel_set
         c_out = int(c_out / len(self._kernel_set))
@@ -72,7 +72,7 @@ class DilatedInception(nn.Module):
         self._reset_parameters()
 
     def _reset_parameters(self):
-        for param in self.parameteres():
+        for param in self.parameters():
             if param.dim() > 1:
                 nn.init.xavier_uniform_(param)
             else:
@@ -104,7 +104,7 @@ class GraphConstructor(nn.Module):
         self._alpha = alpha
 
     def _reset_parameters(self):
-        for param in self.parameteres():
+        for param in self.parameters():
             if param.dim() > 1:
                 nn.init.xavier_uniform_(param)
             else:
@@ -139,7 +139,7 @@ class LayerNormalization(nn.Module):
 
     def __init__(self, normalized_shape, eps=1e-5, elementwise_affine=True):
         super(LayerNormalization, self).__init__()
-        self._normalized_shape = normalized_shape
+        self._normalized_shape = tuple(normalized_shape)
         self._eps = eps
         self._elementwise_affine = elementwise_affine
         if self._elementwise_affine:
@@ -156,7 +156,7 @@ class LayerNormalization(nn.Module):
             init.zeros_(self._bias)
 
     def forward(self, X, idx):
-        if self._elementwise_Affine:
+        if self._elementwise_affine:
             return F.layer_norm(
                 X,
                 tuple(X.shape[1:]),
@@ -244,19 +244,19 @@ class MTGNNLayer(nn.Module):
         
         if seq_length > receptive_field:
             self._normalization = LayerNormalization(
-                (residual_channels, num_nodes, receptive_field - rf_size_j + 1),
+                (residual_channels, num_nodes, int(receptive_field - rf_size_j + 1)),
                 elementwise_affine=layer_norm_affine
             )
         self._reset_parameters()
 
     def _reset_parameters(self):
-        for param in self.parameteres():
+        for param in self.parameters():
             if param.dim() > 1:
                 nn.init.xavier_uniform_(param)
             else:
                 nn.init.uniform_(param)
 
-    def forward(self ,X, X_skip, A_tilde, idx, training):
+    def forward(self, X, X_skip, A_tilde, idx, training):
         X_residual = X
         X_filter = self._filter_conv(X)
         X_filter = T.tanh(X_filter)
@@ -305,6 +305,7 @@ class MTGNN(nn.Module):
     ):
         super(MTGNN, self).__init__()
         self._gcn_true = gcn_true
+        self._build_adj_true = build_adj
         self._num_nodes = num_nodes
         self._dropout = dropout
         self._seq_length = seq_length
@@ -335,7 +336,7 @@ class MTGNN(nn.Module):
                     gcn_true=gcn_true,
                     seq_length=seq_length,
                     receptive_field=self._receptive_field,
-                    droput=dropout,
+                    dropout=dropout,
                     gcn_depth=gcn_depth,
                     num_nodes=num_nodes,
                     propalpha=propalpha
@@ -370,7 +371,7 @@ class MTGNN(nn.Module):
             self._skip_conv_E = nn.Conv2d(
                 in_channels=residual_channels,
                 out_channels=skip_channels,
-                kernel_size=(1, self._seq_length - self._receptive_field + 1),
+                kernel_size=(1, int(self._seq_length - self._receptive_field + 1)),
                 bias=True
             )
         
@@ -383,8 +384,8 @@ class MTGNN(nn.Module):
             )
 
             self._skip_conv_E = nn.Conv2d(
-                in_channels=skip_channels,
-                out_channels=end_channels,
+                in_channels=residual_channels,
+                out_channels=skip_channels,
                 kernel_size=(1, 1),
                 bias=True
             )
@@ -396,14 +397,21 @@ class MTGNN(nn.Module):
             bias=True
         )
 
+        self._end_conv_2 = nn.Conv2d(
+            in_channels=end_channels,
+            out_channels=out_dim,
+            kernel_size=(1, 1),
+            bias=True
+        )
+
     def _reset_parameters(self):
-        for param in self.parameteres():
+        for param in self.parameters():
             if param.dim() > 1:
                 nn.init.xavier_uniform_(param)
             else:
                 nn.init.uniform_(param)
 
-    def _receptive_field(self, dilation_exponential, kernel_size, layers):
+    def _set_receptive_field(self, dilation_exponential, kernel_size, layers):
         if dilation_exponential > 1:
             self._receptive_field = int(1 + (kernel_size - 1) * dilation_exponential ** 
                 layers - 1) / (dilation_exponential - 1)
@@ -414,7 +422,7 @@ class MTGNN(nn.Module):
         seq_len = X_in.size(3)
         assert (
             seq_len == self._seq_length
-        ), 'Input sequence length no equal to preset sequence length.'
+        ), 'Input sequence length not equal to preset sequence length.'
 
         if self._seq_length < self._receptive_field:
             X_in = F.pad(
@@ -446,3 +454,4 @@ class MTGNN(nn.Module):
         X = F.relu(self._end_conv_1(X))
         X = self._end_conv_2(X)
         return X
+    
