@@ -284,6 +284,9 @@ class AttentionOutputModule(nn.Module):
 class Agent(nn.Module):
     def __init__(self, filename):
         super(Agent, self).__init__()
+        ###
+        # minibatch_size: int
+        # filename: location of market data
         self.minibatch_size = 128
         self.filename = filename
         self.network = AttentionOutputModule(
