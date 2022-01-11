@@ -271,6 +271,6 @@ class AttentionOutputModule(nn.Module):
         ###
         # observation: Tensor (n_nodes, n_features)
         
-        # output: Tensor (n_nodes)
+        # output: Tensor (n_nodes) - action (new portfloio weights)
         Y = self.compute_att_weighted_conv_output(observation)
         return self.FC(Y)
