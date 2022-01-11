@@ -243,12 +243,23 @@ class AttentionOutputModule(nn.Module):
         self.W = nn.Parameter(T.zeros(n_features, n_features))
         self.b = nn.Parameter(T.zeros(n_features))
         self.v = nn.Parameter(T.zeros(n_features))
+
+        self.FC = nn.Sequential(
+            nn.Linear(n_nodes * n_features, 512),
+            F.relu(),
+            nn.Linear(512, n_nodes),
+            F.softmax()
+        )
         self.optimizer = T.optim.Adam(self.parameters(), lr=1e-4)
 
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
 
     def compute_att_weighted_conv_output(self, observation):
+        ###
+        # observation: Tensor (n_nodes, n_data_features + 1, lookback_window)
+        
+        # output: Tensor (n_nodes, n_features)
         hidden_states = self.STJGCN.STJGN_module(observation)
         Z = T.sum(T.exp(hidden_states))
         for state in hidden_states:
@@ -257,4 +268,9 @@ class AttentionOutputModule(nn.Module):
         return T.dot(alpha, hidden_states)
 
     def forward(self, observation):
+        ###
+        # observation: Tensor (n_nodes, n_features)
         
+        # output: Tensor (n_nodes)
+        Y = self.compute_att_weighted_conv_output(observation)
+        return self.FC(Y)
