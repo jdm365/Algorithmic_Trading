@@ -4,7 +4,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from torch.nn import opt
-
+import pandas as pd
+import tqdm
 
 class GraphConstructor(nn.Module):
     def __init__(self, n_nodes, n_features, lookback_window, time_features=15*5*4*12, delta_min=0.05):
@@ -244,8 +245,10 @@ class AttentionOutputModule(nn.Module):
         self.b = nn.Parameter(T.zeros(n_features))
         self.v = nn.Parameter(T.zeros(n_features))
 
+        self.state_layer = nn.Linear(n_nodes * n_features, 256)
+        self.last_action_layer = nn.Linear(n_nodes, 256)
+
         self.FC = nn.Sequential(
-            nn.Linear(n_nodes * n_features, 512),
             F.relu(),
             nn.Linear(512, n_nodes),
             F.softmax()
@@ -267,10 +270,84 @@ class AttentionOutputModule(nn.Module):
             alpha = T.exp(s) / Z
         return T.dot(alpha, hidden_states)
 
-    def forward(self, observation):
+    def forward(self, observation, last_action):
         ###
-        # observation: Tensor (n_nodes, n_features)
+        # observation: Tensor (n_nodes, n_data_features + 1, lookback_window)
+        # last_action: Tensor (n_nodes) - last action (previous portfolio weights)
         
         # output: Tensor (n_nodes) - action (new portfloio weights)
         Y = self.compute_att_weighted_conv_output(observation)
-        return self.FC(Y)
+        out = T.cat(self.state_layer(Y), self.last_action_layer(last_action))
+        return self.FC(out)
+
+
+class Agent(nn.Module):
+    def __init__(self, filename):
+        super(Agent, self).__init__()
+        self.minibatch_size = 128
+        self.filename = filename
+        self.network = AttentionOutputModule(
+            kernel_size=2, 
+            n_data_features=4, 
+            n_output_features=4, 
+            dilation_list=[2, 3, 6, 7], 
+            fc1_dims=256, 
+            fc2_dims=512, 
+            n_features=64, 
+            n_nodes=50, 
+            lookback_window=64
+        )
+        
+        self.optimizer = T.optim.Adam(self.parameters(), lr=1e-4)
+
+        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
+        self.to(self.device)
+
+    def create_global(self):
+        ###
+        # time_initial: int - time step index of current state
+
+        # output: Tensor (n_nodes, n_data_features + 1, lookback_window) - current state
+
+        DF = pd.read_csv(self.filename)
+        ## Create global price tensor
+        ## Will create when I get data
+
+    def step(self, observation, last_action):
+        action = self.network.forward(observation, last_action)
+        price_change_vector = observation[:, 0, -1]
+        reward = T.dot(last_action, price_change_vector) / self.minibatch_size
+        return action, reward
+
+        last_action, reward = self.step(last_action)
+if __name__ == '__main__':
+    n_epochs = 1000
+    agent = Agent(filename='FileLocation')
+    X = Agent.create_global()
+    for epoch in tqdm(range(n_epochs)):
+        done = False
+        time_initial = np.random.randint(agent.network.lookback_window, \
+            len(Agent.create_global().shape(-1)) - agent.minibatch_size)
+        Reward = 0
+        cntr = 0
+        capital = 10000
+        while done is False:
+            observation = X[:, :, time_initial + cntr - agent.network.lookback_window:cntr + time_initial]
+            last_action, reward = agent.step(observation, last_action)
+            Reward += reward
+            capital *= T.exp(reward * agent.minibatch_size)
+            cntr += 1
+            if cntr % agent.minibatch_size == 0:
+                done = True
+
+        Reward.backward()
+        agent.optimizer.step()
+        agent.optimizer.zero_grad()
+        Profits = 10000 - capital
+
+        print('Episode profits: {Profits}')
+        
+    T.save(agent.state_dict())
+            
+
+
