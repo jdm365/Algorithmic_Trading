@@ -319,7 +319,7 @@ class Agent(nn.Module):
         reward = T.dot(last_action, price_change_vector) / self.minibatch_size
         return action, reward
 
-        last_action, reward = self.step(last_action)
+        
 if __name__ == '__main__':
     n_epochs = 1000
     agent = Agent(filename='FileLocation')
@@ -339,14 +339,14 @@ if __name__ == '__main__':
             cntr += 1
             if cntr % agent.minibatch_size == 0:
                 done = True
-
-        Reward.backward()
+        Loss = -Reward
+        Loss.backward()
         agent.optimizer.step()
         agent.optimizer.zero_grad()
         Profits = 10000 - capital
 
         print('Episode profits: {Profits}')
-        
+
     T.save(agent.state_dict())
             
 
