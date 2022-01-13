@@ -275,22 +275,24 @@ class AttentionOutputModule(nn.Module):
 
 
 class Agent(nn.Module):
-    def __init__(self):
+    def __init__(self, kernel_size, n_data_features, n_output_features, 
+    dilation_list, fc1_dims, fc2_dims, n_features, n_nodes, lookback_window,
+    minibatch_size):
         super(Agent, self).__init__()
         ###
         # minibatch_size: int
         # filename: location of market data
-        self.minibatch_size = 128
+        self.minibatch_size = minibatch_size
         self.network = AttentionOutputModule(
-            kernel_size=2, 
-            n_data_features=4, 
-            n_output_features=4, 
-            dilation_list=[2, 3, 6, 7], 
-            fc1_dims=256, 
-            fc2_dims=512, 
-            n_features=64, 
-            n_nodes=50, 
-            lookback_window=64
+            kernel_size=kernel_size, 
+            n_data_features=n_data_features, 
+            n_output_features=n_output_features, 
+            dilation_list=dilation_list, 
+            fc1_dims=fc1_dims, 
+            fc2_dims=fc2_dims, 
+            n_features=n_features, 
+            n_nodes=n_nodes, 
+            lookback_window=lookback_window
         )
         
         self.optimizer = T.optim.Adam(self.parameters(), lr=1e-4)
@@ -354,7 +356,18 @@ class GetData():
 
 if __name__ == '__main__':
     n_epochs = 1000
-    agent = Agent()
+    agent = Agent(
+        kernel_size=2, 
+        n_data_features=4, 
+        n_output_features=4, 
+        dilation_list=[2, 3, 4, 6], 
+        fc1_dims=256, 
+        fc2_dims=512, 
+        n_features=64, 
+        n_nodes=X.shape[0], 
+        lookback_window=64,
+        minibatch_size=256
+    )
     X = GetData().make_global_tensor_no_time()
     M = GetData().make_global_temporal_tensor()
     for epoch in tqdm(range(n_epochs)):
