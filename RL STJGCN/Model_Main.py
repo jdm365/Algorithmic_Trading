@@ -3,11 +3,10 @@ from torch._C import Value
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from torch.nn import opt
 import pandas as pd
-import tqdm
+from tqdm import tqdm
 import os
-import datetime
+from datetime import datetime
 
 class GraphConstructor(nn.Module):
     def __init__(self, n_nodes, n_features, lookback_window, time_features=15+5+4+12, delta_min=0.05):
@@ -28,15 +27,15 @@ class GraphConstructor(nn.Module):
         fc1_dims = 256
         self.spatial = nn.Sequential(
             nn.Linear(n_nodes, fc1_dims),
-            F.relu(),
+            nn.ReLU(),
             nn.Linear(fc1_dims, n_features),
-            F.relu()
+            nn.ReLU()
         )
         self.temporal = nn.Sequential(
             nn.Linear(n_nodes * time_features, fc1_dims),
-            F.relu(),
+            nn.ReLU(),
             nn.Linear(fc1_dims, n_features),
-            F.relu()
+            nn.ReLU()
         )
         
         self.B = nn.Parameter(T.ones(n_features, n_features))
@@ -105,11 +104,11 @@ class DilatedGraphConvolutionCell(nn.Module):
 
         self.FC = nn.Sequential(
             nn.Linear(n_nodes * n_data_features, fc1_dims),
-            F.relu(),
+            nn.ReLU(),
             nn.Linear(fc1_dims, fc2_dims),
-            F.relu(),
+            nn.ReLU(),
             nn.Linear(fc2_dims, n_nodes * n_features),
-            F.relu()
+            nn.ReLU()
         )
 
         self.W_forward = nn.Parameter(T.ones((self.kernel_size, n_features, n_output_features)))
@@ -241,9 +240,9 @@ class AttentionOutputModule(nn.Module):
         self.last_action_layer = nn.Linear(n_nodes, 256)
 
         self.FC = nn.Sequential(
-            F.relu(),
+            nn.ReLU(),
             nn.Linear(512, n_nodes),
-            F.softmax()
+            nn.Softmax()
         )
         self.optimizer = T.optim.Adam(self.parameters(), lr=1e-4)
 
@@ -300,10 +299,27 @@ class Agent(nn.Module):
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
 
+    def calculate_commisions_factor(self, observation, action, last_action):
+        delta = 5e-3
+        c_factor = .0025
+        done = False
+        action = action.detach().clone()
+        price_change_vector = observation[:, 2, -1]
+        w_prime = T.dot(last_action, price_change_vector)
+        mu = c_factor * T.sum(T.abs(w_prime - action))
+        while not done:
+            mu_ = (1 - c_factor * w_prime[0] - (2*c_factor - c_factor**2) * T.sum(F.relu(w_prime[1:] - mu * action[1:]))) / (1 - c_factor * action[0])
+            if T.abs(mu_-mu) < delta:
+                done=True
+            else:
+                mu = mu_
+        return mu_
+
     def step(self, observation, time_features, last_action):
         action = self.network.forward(observation, time_features, last_action)
         price_change_vector = observation[:, 2, -1]
-        reward = T.dot(last_action, price_change_vector) / self.minibatch_size
+        mu = self.calculate_commisions_factor(observation, action, last_action)
+        reward = T.log(mu * T.dot(last_action, price_change_vector)) / self.minibatch_size
         return action, reward
 
 
@@ -373,10 +389,11 @@ if __name__ == '__main__':
     for epoch in tqdm(range(n_epochs)):
         done = False
         time_initial = np.random.randint(agent.network.lookback_window, \
-            X.shape(-1) - agent.minibatch_size)
+            X.shape[-1] - agent.minibatch_size)
         Reward = 0
         cntr = 0
         capital = 10000
+        last_action = nn.Softmax(T.rand((X.shape[0])))
         while done is False:
             observation = X[:, :, time_initial + cntr - agent.network.lookback_window:cntr + time_initial]
             time_feature = M[time_initial + cntr - agent.network.lookback_window:cntr + time_initial, :]
