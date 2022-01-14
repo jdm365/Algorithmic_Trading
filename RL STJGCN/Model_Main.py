@@ -356,6 +356,8 @@ class GetData():
 
 if __name__ == '__main__':
     n_epochs = 1000
+    X = GetData().make_global_tensor_no_time()
+    M = GetData().make_global_temporal_tensor()
     agent = Agent(
         kernel_size=2, 
         n_data_features=4, 
@@ -368,8 +370,6 @@ if __name__ == '__main__':
         lookback_window=64,
         minibatch_size=256
     )
-    X = GetData().make_global_tensor_no_time()
-    M = GetData().make_global_temporal_tensor()
     for epoch in tqdm(range(n_epochs)):
         done = False
         time_initial = np.random.randint(agent.network.lookback_window, \
