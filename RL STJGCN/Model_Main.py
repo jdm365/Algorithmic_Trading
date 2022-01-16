@@ -342,10 +342,11 @@ class Agent(nn.Module):
         return mu_.to(self.device)
 
     def step(self, observation, time_features, last_action):
-        action = self.network.forward(observation.to(self.device), time_features.to(self.device), last_action)
+        observation = observation.to(self.device)
+        time_features = time_features.to(self.device)
+        action = self.network.forward(observation, time_features, last_action)
         price_change_vector = observation[:, 2, -1]
         mu = self.calculate_commisions_factor(observation, action, last_action)
-        print(last_action.device, price_change_vector.device)
         reward = T.log(mu * T.dot(last_action, price_change_vector)) / self.minibatch_size
         return action, reward
 
