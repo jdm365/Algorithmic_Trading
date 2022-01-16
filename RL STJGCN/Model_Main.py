@@ -268,7 +268,7 @@ class AttentionOutputModule(nn.Module):
 
         for idx, state in enumerate(hidden_states):
             HS[idx, :, :] = state
-        
+        print(self.v.device, HS.device)
         for layer in range(HS.shape[0]):
             s = T.mm(T.transpose(self.v, 0, 1), T.transpose(T.tanh(lin(HS[layer, :, :])), 0, 1))
             Z += T.exp(s)
