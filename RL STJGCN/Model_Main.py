@@ -138,7 +138,7 @@ class DilatedGraphConvolutionCell(nn.Module):
         adjacency_matrix = self.graph.create_adjacency_matrix(time_features, idx, time_diff)
         degree_matrix = T.eye(adjacency_matrix.shape[0]) * adjacency_matrix.sum(-1)
         D = T.inverse(T.tensor(sqrtm(degree_matrix), dtype=T.float))
-        return T.mm(T.mm(D, adjacency_matrix), D)
+        return T.mm(T.mm(D, adjacency_matrix), D).to(self.device)
 
     def fully_connected(self, observation):
         observation = observation.detach().clone()
