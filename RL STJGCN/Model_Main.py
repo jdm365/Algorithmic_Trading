@@ -292,8 +292,8 @@ class AttentionOutputModule(nn.Module):
         
         # output: Tensor (n_nodes) - action (new portfloio weights)
         Y = self.compute_att_weighted_conv_output(observation, time_features)
-        print(Y.device, (T.ones(self.n_nodes, 256) * self.last_action_layer(last_action)).device)
-        out = T.cat((self.state_layer(Y), T.ones(self.n_nodes, 256) * self.last_action_layer(last_action)), dim=1)
+        
+        out = T.cat((self.state_layer(Y), T.ones(self.n_nodes, 256).to(self.device) * self.last_action_layer(last_action)), dim=1)
         action = self.FC(out)
         return T.squeeze(F.softmax(action, dim=0))
 
