@@ -145,6 +145,7 @@ class DilatedGraphConvolutionCell(nn.Module):
         X = self.FC(obs).reshape(self.lookback_window, self.n_nodes, self.n_features)
         X = X.permute(1, 2, 0).contiguous()
         self.X = X
+        self.X.to('cuda:0' if T.cuda.is_available() else 'cpu')
 
     def conv(self, input, time_features, idx):
         ###
@@ -411,6 +412,7 @@ if __name__ == '__main__':
         lookback_window=64,
         minibatch_size=256
     )
+    print(agent.network.STJGCN.STJGCN.X, '\t\t', agent.network.STJGCN.STJGCN.X.is_cuda)
     for epoch in tqdm(range(n_epochs)):
         done = False
         time_initial = np.random.randint(agent.network.lookback_window, \
