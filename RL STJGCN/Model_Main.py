@@ -398,7 +398,7 @@ class GetData():
 
 if __name__ == '__main__':
     shutup.please()
-    n_epochs = 1000
+    n_epochs = 2
     X = GetData().make_global_tensor_no_time()
     M = GetData().make_global_temporal_tensor()
     agent = Agent(
