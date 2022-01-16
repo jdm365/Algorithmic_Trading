@@ -413,7 +413,7 @@ if __name__ == '__main__':
         n_features=64, 
         n_nodes=X.shape[0], 
         lookback_window=64,
-        minibatch_size=16
+        minibatch_size=60
     )
     scaler = T.cuda.amp.GradScaler()
     for epoch in tqdm(range(n_epochs)):
