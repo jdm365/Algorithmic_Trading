@@ -141,13 +141,12 @@ class DilatedGraphConvolutionCell(nn.Module):
         return T.mm(T.mm(D, adjacency_matrix), D)
 
     def fully_connected(self, observation):
-        print(observation.device)
+        print(self.lookback_window.device)
         observation = observation.detach().clone()
-        print(observation.device)
-        obs = T.flatten(observation.permute(2, 0, 1).contiguous(), start_dim=1)
+        obs = T.flatten(observation.permute(2, 0, 1).contiguous(), start_dim=1).to(self.device)
         X = self.FC(obs).reshape(self.lookback_window, self.n_nodes, self.n_features)
         X = X.permute(1, 2, 0).contiguous()
-        self.X = X.to(self.device)
+        self.X = X
 
     def conv(self, input, time_features, idx):
         ###
