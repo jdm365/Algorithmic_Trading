@@ -416,13 +416,13 @@ if __name__ == '__main__':
         done = False
         time_initial = np.random.randint(agent.network.lookback_window, \
             X.shape[-1] - agent.minibatch_size)
-        print(time_initial.is_cuda)
         Reward = 0
         cntr = 0
         capital = 10000
         last_action = nn.Softmax()(T.rand(X.shape[0])).to('cuda:0' if T.cuda.is_available() else 'cpu')
         while done is False:
             observation = X[:, :, time_initial + cntr - agent.network.lookback_window:cntr + time_initial]
+            print(observation.is_cuda)
             time_feature = M[time_initial + cntr - agent.network.lookback_window:cntr + time_initial, :]
             last_action, reward = agent.step(observation, time_feature, last_action)
             Reward += reward
