@@ -327,9 +327,9 @@ class Agent(nn.Module):
         delta = 5e-3
         c_factor = .0025
         done = False
-        action = action.detach().clone()
-        last_action = last_action.detach().clone()
-        observation = observation.detach().clone()
+        action = action.detach().clone().cpu()
+        last_action = last_action.detach().clone().cpu()
+        observation = observation.detach().clone().cpu()
         price_change_vector = T.squeeze(observation[:, 2, -1])
         print(last_action.device, price_change_vector.device)
         w_prime = T.mul(last_action, price_change_vector)
