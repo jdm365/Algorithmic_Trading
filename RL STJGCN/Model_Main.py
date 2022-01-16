@@ -283,7 +283,7 @@ class AttentionOutputModule(nn.Module):
         
         # output: Tensor (n_nodes, n_features)
         print(observation.device, time_features.device)
-        hidden_states = self.STJGCN.STJGN_module(observation, time_features)
+        hidden_states = self.STJGCN.STJGN_module(observation.to(self.device), time_features.to(self.device))
         alpha, HS = self.compute_att_weights(hidden_states)
         return T.sum(T.mul(alpha, HS), dim=0)
 
