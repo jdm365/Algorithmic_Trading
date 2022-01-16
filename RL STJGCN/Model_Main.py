@@ -292,9 +292,8 @@ class AttentionOutputModule(nn.Module):
         # last_action: Tensor (n_nodes) - last action (previous portfolio weights)
         
         # output: Tensor (n_nodes) - action (new portfloio weights)
-        print(last_action.device)
-        Y = self.compute_att_weighted_conv_output(observation.to(self.device), time_features.to(self.device))
-        out = T.cat((self.state_layer(Y), T.ones(self.n_nodes, 256) * self.last_action_layer(last_action.to(self.device))), dim=1)
+        Y = self.compute_att_weighted_conv_output(observation, time_features)
+        out = T.cat((self.state_layer(Y), T.ones(self.n_nodes, 256) * self.last_action_layer(last_action)), dim=1)
         action = self.FC(out)
         return T.squeeze(F.softmax(action, dim=0))
 
@@ -343,10 +342,11 @@ class Agent(nn.Module):
         return mu_
 
     def step(self, observation, time_features, last_action):
-        action = self.network.forward(observation, time_features, last_action)
+        action = self.network.forward(observation.to(self.device), time_features.to(self.device), last_action.to(self.device))
         price_change_vector = observation[:, 2, -1]
         mu = self.calculate_commisions_factor(observation, action, last_action)
         reward = T.log(mu * T.dot(last_action, price_change_vector)) / self.minibatch_size
+        print(price_change_vector.device, reward.device, action.device)
         return action, reward
 
 
