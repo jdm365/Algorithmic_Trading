@@ -428,7 +428,7 @@ if __name__ == '__main__':
             time_features = M[time_initial + cntr - agent.network.lookback_window:cntr + time_initial, :]
             with T.cuda.amp.autocast():
                 last_action, reward = agent.step(observation, time_features, last_action)
-            Reward += reward
+                Reward += reward
             capital *= T.exp(reward * agent.minibatch_size)
             cntr += 1
             if cntr % agent.minibatch_size == 0:
