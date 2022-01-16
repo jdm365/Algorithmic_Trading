@@ -327,6 +327,8 @@ class Agent(nn.Module):
         c_factor = .0025
         done = False
         action = action.detach().clone()
+        last_action = last_action.detach().clone()
+        observation = observation.detach().clone()
         price_change_vector = T.squeeze(observation[:, 2, -1])
         w_prime = T.mul(last_action, price_change_vector)
         mu = c_factor * T.sum(T.abs(w_prime - action))
@@ -417,7 +419,7 @@ if __name__ == '__main__':
         Reward = 0
         cntr = 0
         capital = 10000
-        last_action = nn.Softmax()(T.rand(X.shape[0]))
+        last_action = nn.Softmax()(T.rand(X.shape[0])).to('cuda:0' if T.cuda.is_available() else 'cpu')
         while done is False:
             observation = X[:, :, time_initial + cntr - agent.network.lookback_window:cntr + time_initial]
             time_feature = M[time_initial + cntr - agent.network.lookback_window:cntr + time_initial, :]
