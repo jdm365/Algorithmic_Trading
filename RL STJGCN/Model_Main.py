@@ -346,7 +346,6 @@ class Agent(nn.Module):
         price_change_vector = observation[:, 2, -1]
         mu = self.calculate_commisions_factor(observation, action, last_action)
         reward = T.log(mu * T.dot(last_action, price_change_vector)) / self.minibatch_size
-        print(action.is_cuda, reward.is_cuda)
         return action, reward
 
 
@@ -417,6 +416,7 @@ if __name__ == '__main__':
         done = False
         time_initial = np.random.randint(agent.network.lookback_window, \
             X.shape[-1] - agent.minibatch_size)
+        print(time_initial.is_cuda)
         Reward = 0
         cntr = 0
         capital = 10000
