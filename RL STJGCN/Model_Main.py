@@ -268,7 +268,6 @@ class AttentionOutputModule(nn.Module):
 
         for idx, state in enumerate(hidden_states):
             HS[idx, :, :] = state
-        print(self.v.device, HS.device)
         for layer in range(HS.shape[0]):
             s = T.mm(T.transpose(self.v, 0, 1), T.transpose(T.tanh(lin(HS[layer, :, :])), 0, 1))
             Z += T.exp(s)
@@ -293,6 +292,7 @@ class AttentionOutputModule(nn.Module):
         
         # output: Tensor (n_nodes) - action (new portfloio weights)
         Y = self.compute_att_weighted_conv_output(observation, time_features)
+        print(Y.device, (T.ones(self.n_nodes, 256) * self.last_action_layer(last_action)).device)
         out = T.cat((self.state_layer(Y), T.ones(self.n_nodes, 256) * self.last_action_layer(last_action)), dim=1)
         action = self.FC(out)
         return T.squeeze(F.softmax(action, dim=0))
