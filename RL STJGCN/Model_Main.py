@@ -424,6 +424,7 @@ if __name__ == '__main__':
             observation = X[:, :, time_initial + cntr - agent.network.lookback_window:cntr + time_initial]
             time_feature = M[time_initial + cntr - agent.network.lookback_window:cntr + time_initial, :]
             last_action, reward = agent.step(observation, time_feature, last_action)
+            last_action = last_action.to('cuda:0' if T.cuda.is_available() else 'cpu')
             Reward += reward
             print(Reward)
             capital *= T.exp(reward * agent.minibatch_size)
