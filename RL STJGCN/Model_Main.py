@@ -342,8 +342,8 @@ class Agent(nn.Module):
         return mu_
 
     def step(self, observation, time_features, last_action):
+        print(observation.device, time_features.device, last_action.device)
         action = self.network.forward(observation.to(self.device), time_features.to(self.device), last_action.to(self.device))
-        print('Error is in forward loop you dummy!')
         price_change_vector = observation[:, 2, -1]
         mu = self.calculate_commisions_factor(observation, action, last_action)
         reward = T.log(mu * T.dot(last_action, price_change_vector)) / self.minibatch_size
