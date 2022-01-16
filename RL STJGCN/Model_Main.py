@@ -73,7 +73,7 @@ class GraphConstructor(nn.Module):
         x = T.mm(T.mm(U1, self.B), T.transpose(U2, 0, 1))
         x = T.tensor([i if i >= self.delta_min else 0 \
             for i in T.flatten(x)]).reshape(x.shape)
-        return F.softmax(x)
+        return x.float().softmax(dim=-1)
 
 
 class DilatedGraphConvolutionCell(nn.Module):
