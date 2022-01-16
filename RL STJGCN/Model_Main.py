@@ -331,6 +331,7 @@ class Agent(nn.Module):
         last_action = last_action.detach().clone()
         observation = observation.detach().clone()
         price_change_vector = T.squeeze(observation[:, 2, -1])
+        print(last_action.device, price_change_vector.device)
         w_prime = T.mul(last_action, price_change_vector)
         mu = c_factor * T.sum(T.abs(w_prime - action))
         while not done:
@@ -398,7 +399,7 @@ class GetData():
 
 if __name__ == '__main__':
     shutup.please()
-    n_epochs = 2
+    n_epochs = 1000
     X = GetData().make_global_tensor_no_time()
     M = GetData().make_global_temporal_tensor()
     agent = Agent(
