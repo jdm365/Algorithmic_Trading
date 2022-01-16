@@ -44,7 +44,7 @@ class GraphConstructor(nn.Module):
         
         self.B = nn.Parameter(T.ones(n_features, n_features))
 
-        self.optimizer = T.optim.Adam(self.parameters(), lr=1e-4)
+        self.optimizer = T.optim.Adam(self.parameters(), lr=1e-3)
 
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
@@ -123,7 +123,7 @@ class DilatedGraphConvolutionCell(nn.Module):
         self.W_backward = nn.Parameter(T.ones((self.kernel_size, n_features, n_features)))
         self.b = nn.Parameter(T.ones((n_features)))
 
-        self.optimizer = T.optim.Adam(self.parameters(), lr=1e-4)
+        self.optimizer = T.optim.Adam(self.parameters(), lr=1e-3)
 
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
@@ -250,7 +250,7 @@ class AttentionOutputModule(nn.Module):
             nn.ReLU(),
             nn.Linear(512, 1)
         )
-        self.optimizer = T.optim.Adam(self.parameters(), lr=1e-4)
+        self.optimizer = T.optim.Adam(self.parameters(), lr=1e-3)
 
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
@@ -318,7 +318,7 @@ class Agent(nn.Module):
             lookback_window=lookback_window
         )
         
-        self.optimizer = T.optim.Adam(self.parameters(), lr=1e-4)
+        self.optimizer = T.optim.Adam(self.parameters(), lr=1e-3)
 
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
@@ -422,7 +422,7 @@ if __name__ == '__main__':
         Reward = 0
         cntr = 0
         capital = 10000
-        last_action = nn.Softmax()(T.rand(X.shape[0])).to('cuda:0' if T.cuda.is_available() else 'cpu')
+        last_action = (T.rand(X.shape[0])).softmax(dim=0).to('cuda:0' if T.cuda.is_available() else 'cpu')
         while done is False:
             observation = X[:, :, time_initial + cntr - agent.network.lookback_window:cntr + time_initial]
             time_features = M[time_initial + cntr - agent.network.lookback_window:cntr + time_initial, :]
@@ -439,13 +439,15 @@ if __name__ == '__main__':
         scaler.step(agent.optimizer)
         scaler.step(agent.network.optimizer)
         scaler.step(agent.network.STJGCN.optimizer)
-        scaler.step(agent.network.STJGCN.graph.optimizer)
+        #scaler.step(agent.network.STJGCN.graph.optimizer)
         
         scaler.update()
+
         agent.optimizer.zero_grad()
         agent.network.optimizer.zero_grad()
         agent.network.STJGCN.optimizer.zero_grad()
         agent.network.STJGCN.graph.optimizer.zero_grad()
+
         Profits = capital - 10000
 
         print(f'Episode profits: {Profits}')
