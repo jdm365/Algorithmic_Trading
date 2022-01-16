@@ -104,6 +104,11 @@ class DilatedGraphConvolutionCell(nn.Module):
         self.n_features = n_features
         self.n_nodes = n_nodes
         self.lookback_window = lookback_window
+        self.graph = GraphConstructor(
+            self.n_nodes, 
+            self.n_features, 
+            self.lookback_window
+        )
 
         self.FC = nn.Sequential(
             nn.Linear(n_nodes * n_data_features, fc1_dims),
@@ -130,12 +135,7 @@ class DilatedGraphConvolutionCell(nn.Module):
         # time_diff: int - difference between timesteps for ST graph construction
 
         # output: Tensor (n_nodes, n_nodes) - normalized adjacency matrix
-        graph = GraphConstructor(
-            self.n_nodes, 
-            self.n_features, 
-            self.lookback_window
-        )
-        adjacency_matrix = graph.create_adjacency_matrix(time_features, idx, time_diff)
+        adjacency_matrix = self.graph.create_adjacency_matrix(time_features, idx, time_diff)
         degree_matrix = T.eye(adjacency_matrix.shape[0]) * adjacency_matrix.sum(-1)
         D = T.inverse(T.tensor(sqrtm(degree_matrix), dtype=T.float))
         return T.mm(T.mm(D, adjacency_matrix), D)
@@ -411,7 +411,14 @@ if __name__ == '__main__':
         lookback_window=64,
         minibatch_size=256
     )
-    print(next(agent.parameters()).device)
+    for name, param in agent.network.STJGCN.graph.named_parameters():
+        print(name, '\t\t', param.is_cuda)
+    for name, param in agent.network.STJGCN.named_parameters():
+        print(name, '\t\t', param.is_cuda)
+    for name, param in agent.network.named_parameters():
+        print(name, '\t\t', param.is_cuda)
+    for name, param in agent.named_parameters():
+        print(name, '\t\t', param.is_cuda)
     for epoch in tqdm(range(n_epochs)):
         done = False
         time_initial = np.random.randint(agent.network.lookback_window, \
@@ -424,7 +431,6 @@ if __name__ == '__main__':
             observation = X[:, :, time_initial + cntr - agent.network.lookback_window:cntr + time_initial]
             time_feature = M[time_initial + cntr - agent.network.lookback_window:cntr + time_initial, :]
             last_action, reward = agent.step(observation, time_feature, last_action)
-            last_action = last_action.to('cuda:0' if T.cuda.is_available() else 'cpu')
             Reward += reward
             print(Reward)
             capital *= T.exp(reward * agent.minibatch_size)
