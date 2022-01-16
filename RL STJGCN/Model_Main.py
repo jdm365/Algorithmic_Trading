@@ -55,6 +55,7 @@ class GraphConstructor(nn.Module):
 
         # output: Tensor (n_nodes, n_features, lookback_window) - spatio-temporal embedding for each 
         #                                                         node at each time step.
+        print(self.layer_initial.device, time_features.device, self.temporal(time_features).device)
         embedding = T.add(self.spatial(self.layer_initial), self.temporal(time_features))
         embedding = embedding.reshape(self.lookback_window, self.n_nodes, self.n_features)
         return embedding.permute(1, 0, 2).contiguous()
@@ -342,8 +343,7 @@ class Agent(nn.Module):
         return mu_
 
     def step(self, observation, time_features, last_action):
-        print(observation.device, time_features.device, last_action.device)
-        action = self.network.forward(observation.to(self.device), time_features.to(self.device), last_action.to(self.device))
+        action = self.network.forward(observation.to(self.device), time_features.to(self.device), last_action)
         price_change_vector = observation[:, 2, -1]
         mu = self.calculate_commisions_factor(observation, action, last_action)
         reward = T.log(mu * T.dot(last_action, price_change_vector)) / self.minibatch_size
@@ -423,8 +423,8 @@ if __name__ == '__main__':
         last_action = nn.Softmax()(T.rand(X.shape[0])).to('cuda:0' if T.cuda.is_available() else 'cpu')
         while done is False:
             observation = X[:, :, time_initial + cntr - agent.network.lookback_window:cntr + time_initial]
-            time_feature = M[time_initial + cntr - agent.network.lookback_window:cntr + time_initial, :]
-            last_action, reward = agent.step(observation, time_feature, last_action)
+            time_features = M[time_initial + cntr - agent.network.lookback_window:cntr + time_initial, :]
+            last_action, reward = agent.step(observation, time_features, last_action)
             Reward += reward
             print(Reward)
             capital *= T.exp(reward * agent.minibatch_size)
