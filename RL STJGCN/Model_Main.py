@@ -141,7 +141,7 @@ class DilatedGraphConvolutionCell(nn.Module):
         return T.mm(T.mm(D, adjacency_matrix), D).to(self.device)
 
     def fully_connected(self, observation):
-        observation = observation.detach().clone()
+        observation = observation.detach()
         obs = T.flatten(observation.permute(2, 0, 1).contiguous(), start_dim=1).to(self.device)
         X = self.FC(obs).reshape(self.lookback_window, self.n_nodes, self.n_features)
         X = X.permute(1, 2, 0).contiguous()
@@ -155,7 +155,7 @@ class DilatedGraphConvolutionCell(nn.Module):
         # X: Tensor (n_nodes, n_features, lookback_window)
 
         # output: Tensor (n_nodes, n_features, 1) - output of convolution operation
-        Z = T.zeros((self.n_nodes, self.n_features)).to(self.device)
+        Z = T.zeros((self.n_nodes, self.n_features), device=self.device)
         X = input
         for k in range(self.kernel_size):
             X_t = X[:, :, idx - k]
@@ -182,9 +182,9 @@ class DilatedGraphConvolutionCell(nn.Module):
                     Z = self.conv(input, time_features, t)
             else:
                 try:
-                    Z = T.cat((Z, T.zeros(self.n_nodes, self.n_features, 1).to(self.device)), dim=-1)
+                    Z = T.cat((Z, T.zeros((self.n_nodes, self.n_features, 1), device=self.device)), dim=-1)
                 except UnboundLocalError:
-                    Z = T.zeros(self.n_nodes, self.n_features, 1).to(self.device)
+                    Z = T.zeros((self.n_nodes, self.n_features, 1), device=self.device)
         return Z
 
     def STJGN_module(self, observation, time_features):
@@ -261,9 +261,9 @@ class AttentionOutputModule(nn.Module):
         # HS: Tensor (n_conv_layers, n_nodes, n_features)
 
         # output: Tensor (n_conv_layers, n_nodes) - attention weights
-        HS = T.randn(4, *hidden_states[0].shape).to(self.device)
-        Z = T.zeros(1, 23).to(self.device)
-        alpha = T.zeros(4, 23).to(self.device)
+        HS = T.randn((4, *hidden_states[0].shape), device=self.device)
+        Z = T.zeros((1, 23), device=self.device)
+        alpha = T.zeros((4, 23), device=self.device)
         lin = nn.Linear(self.n_features, self.n_features).to(self.device)
 
         for idx, state in enumerate(hidden_states):
@@ -327,6 +327,9 @@ class Agent(nn.Module):
         delta = 5e-3
         c_factor = .0025
         done = False
+        observation = observation.detach()
+        action = action.detach()
+        last_action = last_action.detach()
         price_change_vector = T.squeeze(observation[:, 2, -1]).to(self.device)
         w_prime = T.mul(last_action, price_change_vector).to(self.device)
         mu = c_factor * T.sum(T.abs(w_prime - action))
