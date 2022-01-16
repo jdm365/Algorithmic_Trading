@@ -339,7 +339,7 @@ class Agent(nn.Module):
                 done = True
             else:
                 mu = mu_
-        return mu_
+        return mu_.to(self.device)
 
     def step(self, observation, time_features, last_action):
         action = self.network.forward(observation.to(self.device), time_features.to(self.device), last_action)
