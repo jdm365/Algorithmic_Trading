@@ -142,6 +142,7 @@ class DilatedGraphConvolutionCell(nn.Module):
 
     def fully_connected(self, observation):
         obs = T.flatten(observation.permute(2, 0, 1).contiguous(), start_dim=1)
+        print(obs.device)
         X = self.FC(obs).reshape(self.lookback_window, self.n_nodes, self.n_features)
         X = X.permute(1, 2, 0).contiguous()
         self.X = X
@@ -422,10 +423,7 @@ if __name__ == '__main__':
         last_action = nn.Softmax()(T.rand(X.shape[0])).to('cuda:0' if T.cuda.is_available() else 'cpu')
         while done is False:
             observation = X[:, :, time_initial + cntr - agent.network.lookback_window:cntr + time_initial]
-            observation.to('cuda:0' if T.cuda.is_available() else 'cpu')
-            print(observation.is_cuda)
             time_feature = M[time_initial + cntr - agent.network.lookback_window:cntr + time_initial, :]
-            time_feature.to('cuda:0' if T.cuda.is_available() else 'cpu')
             last_action, reward = agent.step(observation, time_feature, last_action)
             Reward += reward
             print(Reward)
@@ -436,9 +434,15 @@ if __name__ == '__main__':
         Loss = -Reward
         Loss.backward()
         agent.optimizer.step()
+        agent.network.optimizer.step()
+        agent.network.STJGCN.optimizer.step()
+        agent.network.STJGCN.graph.optimizer.step()
         agent.optimizer.zero_grad()
+        agent.network.optimizer.zero_grad()
+        agent.network.STJGCN.optimizer.zero_grad()
+        agent.network.STJGCN.graph.optimizer.zero_grad()
         Profits = 10000 - capital
 
-        print('Episode profits: {Profits}')
+        print(f'Episode profits: {Profits}')
 
     T.save(agent.state_dict())
