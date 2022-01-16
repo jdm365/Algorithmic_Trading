@@ -56,7 +56,7 @@ class GraphConstructor(nn.Module):
         # output: Tensor (n_nodes, n_features, lookback_window) - spatio-temporal embedding for each 
         #                                                         node at each time step.
         print(self.layer_initial.device, time_features.device, self.temporal(time_features).device)
-        embedding = T.add(self.spatial(self.layer_initial), self.temporal(time_features))
+        embedding = T.add(self.spatial(self.layer_initial.to(self.device)), self.temporal(time_features))
         embedding = embedding.reshape(self.lookback_window, self.n_nodes, self.n_features)
         return embedding.permute(1, 0, 2).contiguous()
 
