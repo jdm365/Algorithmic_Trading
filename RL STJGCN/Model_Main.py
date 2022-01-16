@@ -412,7 +412,6 @@ if __name__ == '__main__':
         lookback_window=64,
         minibatch_size=256
     )
-    print(agent.network.STJGCN.STJGCN.X, '\t\t', agent.network.STJGCN.STJGCN.X.is_cuda)
     for epoch in tqdm(range(n_epochs)):
         done = False
         time_initial = np.random.randint(agent.network.lookback_window, \
