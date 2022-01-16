@@ -422,8 +422,10 @@ if __name__ == '__main__':
         last_action = nn.Softmax()(T.rand(X.shape[0])).to('cuda:0' if T.cuda.is_available() else 'cpu')
         while done is False:
             observation = X[:, :, time_initial + cntr - agent.network.lookback_window:cntr + time_initial]
+            observation.to('cuda:0' if T.cuda.is_available() else 'cpu')
             print(observation.is_cuda)
             time_feature = M[time_initial + cntr - agent.network.lookback_window:cntr + time_initial, :]
+            time_feature.to('cuda:0' if T.cuda.is_available() else 'cpu')
             last_action, reward = agent.step(observation, time_feature, last_action)
             Reward += reward
             print(Reward)
