@@ -142,6 +142,7 @@ class DilatedGraphConvolutionCell(nn.Module):
 
     def fully_connected(self, observation):
         obs = T.flatten(observation.permute(2, 0, 1).contiguous(), start_dim=1)
+        obs.to('cuda:0' if T.cuda.is_available() else 'cpu')
         print(obs.device)
         X = self.FC(obs).reshape(self.lookback_window, self.n_nodes, self.n_features)
         X = X.permute(1, 2, 0).contiguous()
