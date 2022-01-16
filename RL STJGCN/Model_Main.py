@@ -345,8 +345,6 @@ class Agent(nn.Module):
         action = self.network.forward(observation.to(self.device), time_features.to(self.device), last_action)
         price_change_vector = observation[:, 2, -1]
         mu = self.calculate_commisions_factor(observation, action, last_action)
-        last_action = last_action.detach().clone().cpu()
-        observation = observation.detach().clone().cpu()
         reward = T.log(mu * T.dot(last_action, price_change_vector)) / self.minibatch_size
         return action, reward
 
@@ -412,7 +410,7 @@ if __name__ == '__main__':
         n_features=64, 
         n_nodes=X.shape[0], 
         lookback_window=64,
-        minibatch_size=256
+        minibatch_size=16
     )
     for epoch in tqdm(range(n_epochs)):
         done = False
@@ -442,7 +440,7 @@ if __name__ == '__main__':
         agent.network.optimizer.zero_grad()
         agent.network.STJGCN.optimizer.zero_grad()
         agent.network.STJGCN.graph.optimizer.zero_grad()
-        Profits = 10000 - capital
+        Profits = capital - 10000
 
         print(f'Episode profits: {Profits}')
 
