@@ -161,7 +161,6 @@ class DilatedGraphConvolutionCell(nn.Module):
             X_t = X[:, :, idx - k]
             L1 = self.normalize_adjacency_matrix(time_features, idx, k)
             L2 = self.normalize_adjacency_matrix(time_features, idx, -k)
-            print(self.b.device, X_t.device, self.W_forward.device)
             x = T.mm(T.mm(L1, X_t), T.squeeze(self.W_forward[k, :, :])) \
                 + T.mm(T.mm(L2, X_t), T.squeeze(self.W_backward[k, :, :])) \
                 + self.b
@@ -178,14 +177,14 @@ class DilatedGraphConvolutionCell(nn.Module):
         for t in range(1, self.lookback_window-1):
             if t % dilation_factor == 0:
                 try:
-                    Z = T.cat((Z, self.conv(input, time_features, t)), dim=-1).to(self.device)
+                    Z = T.cat((Z, self.conv(input, time_features, t)), dim=-1)
                 except UnboundLocalError:
-                    Z = self.conv(input, time_features, t)
+                    Z = self.conv(input, time_features, t).to(self.device)
             else:
                 try:
-                    Z = T.cat((Z, T.zeros(self.n_nodes, self.n_features, 1)), dim=-1).to(self.device)
+                    Z = T.cat((Z, T.zeros(self.n_nodes, self.n_features, 1)), dim=-1)
                 except UnboundLocalError:
-                    Z = T.zeros(self.n_nodes, self.n_features, 1)
+                    Z = T.zeros(self.n_nodes, self.n_features, 1).to(self.device)
         return Z
 
     def STJGN_module(self, observation, time_features):
