@@ -178,12 +178,12 @@ class DilatedGraphConvolutionCell(nn.Module):
         for t in range(1, self.lookback_window-1):
             if t % dilation_factor == 0:
                 try:
-                    Z = T.cat((Z, self.conv(input, time_features, t)), dim=-1)
+                    Z = T.cat((Z, self.conv(input, time_features, t)), dim=-1).to(self.device)
                 except UnboundLocalError:
                     Z = self.conv(input, time_features, t)
             else:
                 try:
-                    Z = T.cat((Z, T.zeros(self.n_nodes, self.n_features, 1)), dim=-1)
+                    Z = T.cat((Z, T.zeros(self.n_nodes, self.n_features, 1)), dim=-1).to(self.device)
                 except UnboundLocalError:
                     Z = T.zeros(self.n_nodes, self.n_features, 1)
         return Z
