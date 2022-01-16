@@ -155,13 +155,13 @@ class DilatedGraphConvolutionCell(nn.Module):
         # X: Tensor (n_nodes, n_features, lookback_window)
 
         # output: Tensor (n_nodes, n_features, 1) - output of convolution operation
-        Z = T.zeros((self.n_nodes, self.n_features))
+        Z = T.zeros((self.n_nodes, self.n_features)).to(self.device)
         X = input
         for k in range(self.kernel_size):
             X_t = X[:, :, idx - k]
             L1 = self.normalize_adjacency_matrix(time_features, idx, k)
             L2 = self.normalize_adjacency_matrix(time_features, idx, -k)
-            print(L1.device, X_t.device, self.W_forward.device)
+            print(self.b.device, X_t.device, self.W_forward.device)
             x = T.mm(T.mm(L1, X_t), T.squeeze(self.W_forward[k, :, :])) \
                 + T.mm(T.mm(L2, X_t), T.squeeze(self.W_backward[k, :, :])) \
                 + self.b
