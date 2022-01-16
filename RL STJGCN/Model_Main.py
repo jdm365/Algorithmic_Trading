@@ -262,9 +262,9 @@ class AttentionOutputModule(nn.Module):
 
         # output: Tensor (n_conv_layers, n_nodes) - attention weights
         HS = T.randn(4, *hidden_states[0].shape).to(self.device)
-        Z = T.zeros(1, 23)
-        alpha = T.zeros(4, 23)
-        lin = nn.Linear(self.n_features, self.n_features)
+        Z = T.zeros(1, 23).to(self.device)
+        alpha = T.zeros(4, 23).to(self.device)
+        lin = nn.Linear(self.n_features, self.n_features).to(self.device)
 
         for idx, state in enumerate(hidden_states):
             HS[idx, :, :] = state
