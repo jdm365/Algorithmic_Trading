@@ -331,7 +331,6 @@ class Agent(nn.Module):
         last_action = last_action.detach().clone().cpu()
         observation = observation.detach().clone().cpu()
         price_change_vector = T.squeeze(observation[:, 2, -1])
-        print(last_action.device, price_change_vector.device)
         w_prime = T.mul(last_action, price_change_vector)
         mu = c_factor * T.sum(T.abs(w_prime - action))
         while not done:
