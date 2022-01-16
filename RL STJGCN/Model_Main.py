@@ -9,6 +9,7 @@ from tqdm import tqdm
 import os
 from datetime import datetime, time
 from scipy.linalg import sqrtm
+from pathlib import Path
 import shutup
 
 class GraphConstructor(nn.Module):
@@ -346,8 +347,8 @@ class Agent(nn.Module):
 
 
 class GetData():
-    def __init__(self, filepath='/Users/jakemehlman/Desktop/Minute_Data_v1/'):
-        self.filepath = filepath
+    def __init__(self):
+        self.filepath = str(Path(__file__).parent) + '/Minute_Data_v1/'
 
     def make_DF(self):
         DFNEW = pd.DataFrame()
