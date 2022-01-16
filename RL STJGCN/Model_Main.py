@@ -400,6 +400,7 @@ class GetData():
 
 if __name__ == '__main__':
     shutup.please()
+    T.cuda.is_available = lambda: False
     n_epochs = 1000
     X = GetData().make_global_tensor_no_time()
     M = GetData().make_global_temporal_tensor()
@@ -439,7 +440,7 @@ if __name__ == '__main__':
         scaler.step(agent.optimizer)
         scaler.step(agent.network.optimizer)
         scaler.step(agent.network.STJGCN.optimizer)
-        #scaler.step(agent.network.STJGCN.graph.optimizer)
+        scaler.step(agent.network.STJGCN.graph.optimizer)
         
         scaler.update()
 
