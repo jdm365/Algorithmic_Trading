@@ -282,8 +282,7 @@ class AttentionOutputModule(nn.Module):
         # HS: Tensor (n_conv_layers, n_nodes, n_features)
         
         # output: Tensor (n_nodes, n_features)
-        print(observation.device, time_features.to(self.device).device)
-        hidden_states = self.STJGCN.STJGN_module(observation.to(self.device), time_features.to(self.device))
+        hidden_states = self.STJGCN.STJGN_module(observation, time_features)
         alpha, HS = self.compute_att_weights(hidden_states)
         return T.sum(T.mul(alpha, HS), dim=0)
 
@@ -293,8 +292,9 @@ class AttentionOutputModule(nn.Module):
         # last_action: Tensor (n_nodes) - last action (previous portfolio weights)
         
         # output: Tensor (n_nodes) - action (new portfloio weights)
-        Y = self.compute_att_weighted_conv_output(observation, time_features)
-        out = T.cat((self.state_layer(Y), T.ones(self.n_nodes, 256) * self.last_action_layer(last_action)), dim=1)
+        print(last_action.device)
+        Y = self.compute_att_weighted_conv_output(observation.to(self.device), time_features.to(self.device))
+        out = T.cat((self.state_layer(Y), T.ones(self.n_nodes, 256) * self.last_action_layer(last_action.to(self.device))), dim=1)
         action = self.FC(out)
         return T.squeeze(F.softmax(action, dim=0))
 
