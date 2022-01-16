@@ -125,7 +125,7 @@ class DilatedGraphConvolutionCell(nn.Module):
 
         self.optimizer = T.optim.Adam(self.parameters(), lr=1e-4)
 
-        self.device = T.device('cpu')#'cuda:0' if T.cuda.is_available() else 'cpu')
+        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
 
     def normalize_adjacency_matrix(self, time_features, idx, time_diff):
@@ -252,7 +252,7 @@ class AttentionOutputModule(nn.Module):
         )
         self.optimizer = T.optim.Adam(self.parameters(), lr=1e-4)
 
-        self.device = T.device('cpu')#'cuda:0' if T.cuda.is_available() else 'cpu')
+        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
 
     def compute_att_weights(self, hidden_states):
@@ -320,7 +320,7 @@ class Agent(nn.Module):
         
         self.optimizer = T.optim.Adam(self.parameters(), lr=1e-4)
 
-        self.device = T.device('cpu')#'cuda:0' if T.cuda.is_available() else 'cpu')
+        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
 
     def calculate_commisions_factor(self, observation, action, last_action):
@@ -421,7 +421,7 @@ if __name__ == '__main__':
         Reward = 0
         cntr = 0
         capital = 10000
-        last_action = nn.Softmax()(T.rand(X.shape[0]))#.to('cuda:0' if T.cuda.is_available() else 'cpu')
+        last_action = nn.Softmax()(T.rand(X.shape[0])).to('cuda:0' if T.cuda.is_available() else 'cpu')
         while done is False:
             observation = X[:, :, time_initial + cntr - agent.network.lookback_window:cntr + time_initial]
             time_features = M[time_initial + cntr - agent.network.lookback_window:cntr + time_initial, :]
