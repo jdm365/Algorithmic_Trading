@@ -147,7 +147,7 @@ class DilatedGraphConvolutionCell(nn.Module):
         obs = T.flatten(observation.permute(2, 0, 1).contiguous(), start_dim=1)
         X = self.FC(obs).reshape(self.lookback_window, self.n_nodes, self.n_features)
         X = X.permute(1, 2, 0).contiguous()
-        self.X = X
+        self.X = X.to(self.device)
 
     def conv(self, input, time_features, idx):
         ###
@@ -195,7 +195,7 @@ class DilatedGraphConvolutionCell(nn.Module):
         # time_features: Tensor (n_nodes, 15+5+4+12, lookback_window)
 
         # output: list - hidden states of each STJGCN layer
-        self.fully_connected(observation.to(self.device))
+        self.fully_connected(observation)
         Z0 = self.conv_layer(input=self.X, time_features=time_features, dilation_factor=self.dilation_list[0])
         Z1 = self.conv_layer(Z0, time_features, self.dilation_list[1])
         Z2 = self.conv_layer(Z1, time_features, self.dilation_list[2])
