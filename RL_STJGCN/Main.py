@@ -2,7 +2,7 @@ import torch as T
 import shutup
 import numpy as np
 from tqdm import tqdm
-from RL_STJGCN.Model_Main import GetData, Agent, AttentionOutputModule, DilatedGraphConvolutionCell, GraphConstructor
+from RL_STJGCN.Long_Only import GetData, Agent, AttentionOutputModule, DilatedGraphConvolutionCell, GraphConstructor
 
 
 if __name__ == '__main__':
@@ -54,7 +54,7 @@ if __name__ == '__main__':
         agent.network.STJGCN.graph.optimizer.zero_grad()
 
         Profits = capital - 10000
-        Profit_History.append(Profits)
+        Profit_History.append(Profits.detach().numpy())
         History = np.mean(Profit_History[-40:])
 
         if epoch % 10 == 0:
