@@ -60,4 +60,4 @@ if __name__ == '__main__':
         if epoch % 10 == 0:
             print(f'Episode profits: {History}')
 
-    T.save(agent.state_dict())
+    T.save(agent.state_dict(), 'RL_STJGCN_model.pt')
