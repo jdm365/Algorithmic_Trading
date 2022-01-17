@@ -14,7 +14,7 @@ if __name__ == '__main__':
     agent = Agent(
         kernel_size=2, 
         n_data_features=4, 
-        dilation_list=[2, 3, 4, 6], 
+        dilation_list=[2, 4, 2, 2], 
         fc1_dims=256, 
         fc2_dims=512, 
         n_features=64, 
