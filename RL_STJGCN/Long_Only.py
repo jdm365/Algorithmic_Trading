@@ -240,11 +240,12 @@ class AttentionOutputModule(nn.Module):
         )
 
         self.v = nn.Parameter(T.zeros(n_features, 1))
-
-        self.state_layer = nn.Linear(n_features, 256)
-        self.last_action_layer = nn.Linear(n_nodes, 256)
+        self.last_action_weights = nn.Parameter(T.zeros(n_nodes, 1))
 
         self.FC = nn.Sequential(
+            nn.Linear(n_features, 256),
+            nn.ReLU(),
+            nn.Linear(256, 512),
             nn.ReLU(),
             nn.Linear(512, 1)
         )
@@ -291,9 +292,9 @@ class AttentionOutputModule(nn.Module):
         # output: Tensor (n_nodes) - action (new portfloio weights)
         Y = self.compute_att_weighted_conv_output(observation, time_features)
         
-        out = T.cat((self.state_layer(Y), T.ones(self.n_nodes, 256).to(self.device) * self.last_action_layer(last_action)), dim=1)
-        action = self.FC(out)
-        return T.squeeze(F.softmax(action, dim=0))
+        action = self.FC(Y)
+        last_weights = T.mul(self.last_action_weights, last_action.reshape(*last_action.shape, 1))
+        return T.squeeze(F.softmax(action + last_weights, dim=0))
 
 
 class Agent(nn.Module):
@@ -323,7 +324,7 @@ class Agent(nn.Module):
 
     def calculate_commisions_factor(self, observation, action, last_action):
         delta = 5e-3
-        c_factor = 0#.0025
+        c_factor = 0.0025
         done = False
         observation = observation.detach()
         action = action.detach()
