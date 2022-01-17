@@ -415,7 +415,7 @@ if __name__ == '__main__':
         lookback_window=64,
         minibatch_size=60
     )
-    scaler = T.cuda.amp.GradScaler()
+    Profit_History = []
     for epoch in tqdm(range(n_epochs)):
         done = False
         time_initial = np.random.randint(agent.network.lookback_window, \
@@ -427,22 +427,19 @@ if __name__ == '__main__':
         while done is False:
             observation = X[:, :, time_initial + cntr - agent.network.lookback_window:cntr + time_initial]
             time_features = M[time_initial + cntr - agent.network.lookback_window:cntr + time_initial, :]
-            with T.cuda.amp.autocast():
-                last_action, reward = agent.step(observation, time_features, last_action)
-                Reward += reward
+            last_action, reward = agent.step(observation, time_features, last_action)
+            Reward += reward
             capital *= T.exp(reward * agent.minibatch_size)
             cntr += 1
             if cntr % agent.minibatch_size == 0:
                 done = True
         Loss = -Reward
-        scaler.scale(Loss).backward()
+        Loss.backward()
 
-        scaler.step(agent.optimizer)
-        scaler.step(agent.network.optimizer)
-        scaler.step(agent.network.STJGCN.optimizer)
-        scaler.step(agent.network.STJGCN.graph.optimizer)
-        
-        scaler.update()
+        agent.optimizer.step()
+        agent.network.optimizer.step()
+        agent.network.STJGCN.optimizer.step()
+        agent.network.STJGCN.graph.optimizer.step()
 
         agent.optimizer.zero_grad()
         agent.network.optimizer.zero_grad()
@@ -450,7 +447,10 @@ if __name__ == '__main__':
         agent.network.STJGCN.graph.optimizer.zero_grad()
 
         Profits = capital - 10000
+        Profit_History.append(Profits)
+        History = np.mean(Profit_History[-40:])
 
-        print(f'Episode profits: {Profits}')
+        if epoch % 10 == 0:
+            print(f'Episode profits: {History}')
 
     T.save(agent.state_dict())
