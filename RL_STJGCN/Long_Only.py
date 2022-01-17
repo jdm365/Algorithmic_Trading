@@ -192,11 +192,11 @@ class DilatedGraphConvolutionCell(nn.Module):
         # output: list - hidden states of each STJGCN layer
         self.fully_connected(observation)
         self.gamma = 1
-        Z0 = self.conv_layer(input=self.X, time_features=time_features, dilation_factor=self.dilation_list[0])
-        Z1 = self.conv_layer(Z0, time_features, self.dilation_list[1])
-        Z2 = self.conv_layer(Z1, time_features, self.dilation_list[2])
-        Z3 = self.conv_layer(Z2, time_features, self.dilation_list[3])
-        output = [Z0[:, :, -1], Z1[:, :, -1], Z2[:, :, -1], Z3[:, :, -1]]
+        output = []
+        Z = self.X
+        for layer, dilation_factor in enumerate(self.dilation_list):
+            Z = self.conv_layer(input=Z, time_features=time_features, dilation_factor=dilation_factor)
+            output.append(Z[:, :, -1])
         return output
 
 
@@ -259,9 +259,9 @@ class AttentionOutputModule(nn.Module):
         # HS: Tensor (n_conv_layers, n_nodes, n_features)
 
         # output: Tensor (n_conv_layers, n_nodes) - attention weights
-        HS = T.randn((4, *hidden_states[0].shape), device=self.device)
+        HS = T.randn((len(hidden_states), *hidden_states[0].shape), device=self.device)
         Z = T.zeros((1, 23), device=self.device)
-        alpha = T.zeros((4, 23), device=self.device)
+        alpha = T.zeros((len(hidden_states), 23), device=self.device)
         lin = nn.Linear(self.n_features, self.n_features).to(self.device)
 
         for idx, state in enumerate(hidden_states):
@@ -323,7 +323,7 @@ class Agent(nn.Module):
 
     def calculate_commisions_factor(self, observation, action, last_action):
         delta = 5e-3
-        c_factor = .0025
+        c_factor = 0#.0025
         done = False
         observation = observation.detach()
         action = action.detach()

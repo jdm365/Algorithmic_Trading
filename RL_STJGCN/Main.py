@@ -14,7 +14,7 @@ if __name__ == '__main__':
     agent = Agent(
         kernel_size=2, 
         n_data_features=4, 
-        dilation_list=[2, 4, 2, 2], 
+        dilation_list=[2, 2, 4, 2, 2], 
         fc1_dims=256, 
         fc2_dims=512, 
         n_features=64, 
@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
         Profits = capital - 10000
         Profit_History.append(Profits.detach().numpy())
-        History = np.mean(Profit_History[-40:])
+        History = np.mean(Profit_History[-10:])
 
         if epoch % 10 == 0:
             print(f'Episode profits: {History}')
