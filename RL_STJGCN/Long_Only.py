@@ -65,8 +65,12 @@ class GraphConstructor(nn.Module):
 
         # output: Tensor (n_nodes, n_nodes)
         U = self.create_node_embedding(time_features)
-        U1 = T.squeeze(U[:, :, idx - time_diff])
-        U2 = T.squeeze(U[:, :, idx])
+        if time_diff >= 0:
+            U1 = T.squeeze(U[:, :, idx - time_diff])
+            U2 = T.squeeze(U[:, :, idx])
+        else:
+            U1 = T.squeeze(U[:, :, idx])
+            U2 = T.squeeze(U[:, :, idx + time_diff])
         x = T.mm(T.mm(U1, self.B), T.transpose(U2, 0, 1))
         x = T.tensor([i if i >= self.delta_min else 0 \
             for i in T.flatten(x)]).reshape(x.shape)
@@ -144,7 +148,7 @@ class DilatedGraphConvolutionCell(nn.Module):
         X = X.permute(1, 2, 0).contiguous()
         self.X = X
 
-    def conv(self, input, time_features, idx):
+    def conv(self, input, time_features, idx, gamma):
         ###
         # input: Tensor (n_nodes, n_data_features, lookback_window)
         # time_features: Tensor (n_nodes, 15+5+4+12, lookback_window)
@@ -155,9 +159,9 @@ class DilatedGraphConvolutionCell(nn.Module):
         Z = T.zeros((self.n_nodes, self.n_features), device=self.device)
         X = input
         for k in range(self.kernel_size):
-            X_t = X[:, :, idx - k]
-            L1 = self.normalize_adjacency_matrix(time_features, idx, k)
-            L2 = self.normalize_adjacency_matrix(time_features, idx, -k)
+            X_t = X[:, :, (idx // gamma) - k]
+            L1 = self.normalize_adjacency_matrix(time_features, idx, k * gamma)
+            L2 = self.normalize_adjacency_matrix(time_features, idx, -k * gamma)
             x = T.mm(T.mm(L1, X_t), T.squeeze(self.W_forward[k, :, :])) \
                 + T.mm(T.mm(L2, X_t), T.squeeze(self.W_backward[k, :, :])) \
                 + self.b
@@ -171,17 +175,13 @@ class DilatedGraphConvolutionCell(nn.Module):
         # dilation_factor: int - dilation for conv layer
 
         # output: Tensor (n_nodes, n_data_features, lookback_window) - output of convolution operation
-        for t in range(1, self.lookback_window-1):
-            if t % dilation_factor == 0:
+        for t in range(input.shape[-1]):
+            if (t + 1) % dilation_factor == 0:
                 try:
-                    Z = T.cat((Z, self.conv(input, time_features, t)), dim=-1)
+                    Z = T.cat((Z, self.conv(input, time_features, self.gamma * t, self.gamma)), dim=-1)
                 except UnboundLocalError:
-                    Z = self.conv(input, time_features, t)
-            else:
-                try:
-                    Z = T.cat((Z, T.zeros((self.n_nodes, self.n_features, 1), device=self.device)), dim=-1)
-                except UnboundLocalError:
-                    Z = T.zeros((self.n_nodes, self.n_features, 1), device=self.device)
+                    Z = self.conv(input, time_features, self.gamma * t, self.gamma)
+        self.gamma *= dilation_factor
         return Z
 
     def STJGN_module(self, observation, time_features):
@@ -191,6 +191,7 @@ class DilatedGraphConvolutionCell(nn.Module):
 
         # output: list - hidden states of each STJGCN layer
         self.fully_connected(observation)
+        self.gamma = 1
         Z0 = self.conv_layer(input=self.X, time_features=time_features, dilation_factor=self.dilation_list[0])
         Z1 = self.conv_layer(Z0, time_features, self.dilation_list[1])
         Z2 = self.conv_layer(Z1, time_features, self.dilation_list[2])
