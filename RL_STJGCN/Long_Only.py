@@ -323,7 +323,7 @@ class Agent(nn.Module):
 
     def calculate_commisions_factor(self, observation, action, last_action):
         delta = 5e-3
-        c_factor = .0025
+        c_factor = 0#.0025
         done = False
         observation = observation.detach()
         action = action.detach()

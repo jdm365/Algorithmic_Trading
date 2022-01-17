@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
         Profits = capital - 10000
         Profit_History.append(Profits.detach().numpy())
-        History = np.mean(Profit_History[-40:])
+        History = np.mean(Profit_History[-10:])
 
         if epoch % 10 == 0:
             print(f'Episode profits: {History}')
