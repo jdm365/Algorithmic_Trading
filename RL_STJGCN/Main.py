@@ -15,10 +15,10 @@ class Trainer():
 
     
     def train(self, n_epochs, cuda=False):
-        T.cuda.is_available = lambda: cuda
         shutup.please()
         X = GetData(self.trade_frequency).make_global_tensor_no_time()
         M = GetData(self.trade_frequency).make_global_temporal_tensor()
+        T.cuda.is_available = lambda: cuda
         if self.long_only:
             agent = Agent(
                 kernel_size=2, 
