@@ -4,6 +4,7 @@ import numpy as np
 from tqdm import tqdm
 from RL_STJGCN.Long_Only import GetData, Agent
 from RL_STJGCN.Long_Short import Agent as ShortAgent
+from utils import plot_learning
 
 class Trainer():
     def __init__(self, trade_frequency, minibatch_size=30, long_only=True, cuda=False):
@@ -83,7 +84,7 @@ class Trainer():
 
             if epoch % 10 == 0:
                 print(f'Episode profits: {History}')
-
+        plot_learning(Profit_History)
         T.save(agent.state_dict(), 'RL_STJGCN_model.pt')
 
 if __name__ == '__main__':
