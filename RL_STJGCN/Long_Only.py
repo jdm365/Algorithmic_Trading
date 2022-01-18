@@ -358,8 +358,9 @@ class Agent(nn.Module):
 
 
 class GetData():
-    def __init__(self):
-        self.filepath = str(Path(__file__).parent) + '/Minute_Data_v1/'
+    def __init__(self, trade_frequency):
+        filename = '/' + trade_frequency + '_Data_v1/'
+        self.filepath = str(Path(__file__).parent) + filename
 
     def make_DF(self):
         DFNEW = pd.DataFrame()
