@@ -202,7 +202,7 @@ class DilatedGraphConvolutionCell(nn.Module):
 
 class AttentionOutputModule(nn.Module):
     def __init__(self, kernel_size, n_data_features, dilation_list, 
-    fc1_dims, fc2_dims, n_features, n_nodes, lookback_window):
+    fc1_dims, fc2_dims, n_features, n_nodes, lookback_window, margin):
         super(AttentionOutputModule, self).__init__()
         ### 
         # kernel_size: int - size of kernel for convolution
@@ -227,6 +227,7 @@ class AttentionOutputModule(nn.Module):
         self.n_features = n_features
         self.n_nodes = n_nodes
         self.lookback_window = lookback_window
+        self.margin = margin
 
         self.STJGCN = DilatedGraphConvolutionCell(
             kernel_size=kernel_size,
@@ -301,14 +302,15 @@ class AttentionOutputModule(nn.Module):
         # output: Tensor (n_nodes) - action (new portfloio weights)
         Y = T.flatten(self.compute_att_weighted_conv_output(observation, time_features))
         action = self.FC(Y).reshape(*last_action.shape, 1)
-        last_weights = T.mul(self.last_action_weights / 100, last_action.reshape(*last_action.shape, 1))
-        return T.squeeze(F.softmax(action + last_weights, dim=0))
+        last_weights = T.mul(self.last_action_weights, last_action.reshape(*last_action.shape, 1))
+        margin_factor = 1 / T.sum(T.abs(T.tanh(action + last_weights))) / self.margin
+        return T.squeeze(margin_factor * T.tanh(action + last_weights))
 
 
 class Agent(nn.Module):
     def __init__(self, kernel_size, n_data_features, dilation_list, 
     fc1_dims, fc2_dims, n_features, n_nodes, lookback_window,
-    minibatch_size):
+    minibatch_size, margin):
         super(Agent, self).__init__()
         ###
         # minibatch_size: int
@@ -322,7 +324,8 @@ class Agent(nn.Module):
             fc2_dims=fc2_dims, 
             n_features=n_features, 
             n_nodes=n_nodes, 
-            lookback_window=lookback_window
+            lookback_window=lookback_window,
+            margin=margin
         )
         
         self.optimizer = T.optim.Adam(self.parameters(), lr=1e-3)

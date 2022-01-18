@@ -7,7 +7,7 @@ from RL_STJGCN.Long_Only import GetData, Agent, AttentionOutputModule, DilatedGr
 
 if __name__ == '__main__':
     shutup.please()
-    T.cuda.is_available = lambda: False
+    #T.cuda.is_available = lambda: False
     n_epochs = 1000
     X = GetData().make_global_tensor_no_time()
     M = GetData().make_global_temporal_tensor()
@@ -20,7 +20,8 @@ if __name__ == '__main__':
         n_features=64, 
         n_nodes=X.shape[0], 
         lookback_window=64,
-        minibatch_size=60
+        minibatch_size=60#,
+        #margin=1.5
     )
     Profit_History = []
     for epoch in tqdm(range(n_epochs)):
