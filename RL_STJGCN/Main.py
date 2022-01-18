@@ -2,13 +2,14 @@ import torch as T
 import shutup
 import numpy as np
 from tqdm import tqdm
-from RL_STJGCN.Long_Only import GetData, Agent, AttentionOutputModule, DilatedGraphConvolutionCell, GraphConstructor
-
+#from RL_STJGCN.Long_Only import GetData, Agent, AttentionOutputModule, DilatedGraphConvolutionCell, GraphConstructor
+from RL_STJGCN.Long_Short import GetData, Agent, AttentionOutputModule, DilatedGraphConvolutionCell, GraphConstructor
 
 if __name__ == '__main__':
     shutup.please()
     #T.cuda.is_available = lambda: False
     n_epochs = 1000
+    device = 'cuda:0' if T.cuda.is_available() else 'cpu'
     X = GetData().make_global_tensor_no_time()
     M = GetData().make_global_temporal_tensor()
     agent = Agent(
@@ -20,8 +21,8 @@ if __name__ == '__main__':
         n_features=64, 
         n_nodes=X.shape[0], 
         lookback_window=64,
-        minibatch_size=60#,
-        #margin=1.5
+        minibatch_size=60,
+        margin=1.5
     )
     Profit_History = []
     for epoch in tqdm(range(n_epochs)):
@@ -31,7 +32,8 @@ if __name__ == '__main__':
         Reward = 0
         cntr = 0
         capital = 10000
-        last_action = (T.rand(X.shape[0])).softmax(dim=0).to('cuda:0' if T.cuda.is_available() else 'cpu')
+        #last_action = (T.rand(X.shape[0])).softmax(dim=0).to(device)
+        last_action = (agent.margin * ((T.rand(X.shape[0])).softmax(dim=0))).to(device)
         while done is False:
             observation = X[:, :, time_initial + cntr - agent.network.lookback_window:cntr + time_initial]
             time_features = M[time_initial + cntr - agent.network.lookback_window:cntr + time_initial, :]

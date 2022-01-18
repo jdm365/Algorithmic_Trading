@@ -302,8 +302,8 @@ class AttentionOutputModule(nn.Module):
         # output: Tensor (n_nodes) - action (new portfloio weights)
         Y = T.flatten(self.compute_att_weighted_conv_output(observation, time_features))
         action = self.FC(Y).reshape(*last_action.shape, 1)
-        last_weights = T.mul(self.last_action_weights, last_action.reshape(*last_action.shape, 1))
-        margin_factor = 1 / T.sum(T.abs(T.tanh(action + last_weights))) / self.margin
+        last_weights = T.mul(self.last_action_weights, last_action.reshape(*last_action.shape, 1)) / 100
+        margin_factor = self.margin / (T.sum(T.abs(T.tanh(action + last_weights))))
         return T.squeeze(margin_factor * T.tanh(action + last_weights))
 
 
@@ -314,8 +314,8 @@ class Agent(nn.Module):
         super(Agent, self).__init__()
         ###
         # minibatch_size: int
-        # filename: location of market data
         self.minibatch_size = minibatch_size
+        self.margin = margin
         self.network = AttentionOutputModule(
             kernel_size=kernel_size, 
             n_data_features=n_data_features, 
@@ -357,7 +357,13 @@ class Agent(nn.Module):
         action = self.network.forward(observation, time_features, last_action)
         price_change_vector = observation[:, 2, -1]
         mu = self.calculate_commisions_factor(observation, action, last_action)
-        reward = T.log(mu * T.dot(last_action, price_change_vector)) / self.minibatch_size
+        profits = 0
+        for idx, value in enumerate(last_action):
+            if value >= 0:
+                profits += mu * value * price_change_vector[idx]
+            else:
+                profits += mu * -value * (2 - price_change_vector[idx])
+        reward = T.log(profits / self.margin) / self.minibatch_size
         return action, reward
 
 

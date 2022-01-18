@@ -312,7 +312,6 @@ class Agent(nn.Module):
         super(Agent, self).__init__()
         ###
         # minibatch_size: int
-        # filename: location of market data
         self.minibatch_size = minibatch_size
         self.network = AttentionOutputModule(
             kernel_size=kernel_size, 
