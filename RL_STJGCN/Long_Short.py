@@ -269,7 +269,7 @@ class AttentionOutputModule(nn.Module):
 
         # output: Tensor (n_conv_layers, n_nodes) - attention weights
         HS = T.randn((len(hidden_states), *hidden_states[0].shape), device=self.device)
-        alpha = T.zeros((len(hidden_states), 23), device=self.device)
+        alpha = T.zeros((len(hidden_states), self.n_nodes), device=self.device)
 
         for idx, state in enumerate(hidden_states):
             HS[idx, :, :] = state
@@ -402,6 +402,8 @@ class GetData():
             base = arr[i]
 
             half_hour = T.tensor(2 * (int(base[11:13]) - 9) + (int(base[14:16]) >= 30))
+            if half_hour == 0:
+                half_hour += 1
             day = T.tensor(datetime.strptime(base[:10].replace('.', ' '), '%d %m %Y').isoweekday())
             week = T.tensor(abs(int(base[:2]) - 4) // 7)
             month = T.tensor(int(base[3:5]))

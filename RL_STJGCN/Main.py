@@ -10,6 +10,7 @@ class Trainer():
         self.trade_frequency = trade_frequency
         self.minibatch_size = minibatch_size
         self.long_only = long_only
+        self.margin = 1.5
         self.device = 'cuda:0' if T.cuda.is_available() else 'cpu'
 
     
@@ -41,7 +42,7 @@ class Trainer():
                 n_nodes=X.shape[0], 
                 lookback_window=64,
                 minibatch_size=self.minibatch_size,
-                margin=1.5
+                margin=self.margin
             )
         Profit_History = []
         for epoch in tqdm(range(n_epochs)):
@@ -51,7 +52,7 @@ class Trainer():
             Reward = 0
             cntr = 0
             capital = 10000
-            last_action = (agent.margin * ((T.rand(X.shape[0])).softmax(dim=0))).to(self.device)
+            last_action = (self.margin * ((T.rand(X.shape[0])).softmax(dim=0))).to(self.device)
             if self.long_only:
                 last_action = (T.rand(X.shape[0])).softmax(dim=0).to(self.device)
             while done is False:
