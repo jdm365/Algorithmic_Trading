@@ -6,19 +6,19 @@ from RL_STJGCN.Long_Only import GetData, Agent
 from RL_STJGCN.Long_Short import Agent as ShortAgent
 
 class Trainer():
-    def __init__(self, trade_frequency, minibatch_size=30, long_only=True):
+    def __init__(self, trade_frequency, minibatch_size=30, long_only=True, cuda=False):
         self.trade_frequency = trade_frequency
         self.minibatch_size = minibatch_size
         self.long_only = long_only
         self.margin = 1.5
+        T.cuda.is_available = lambda: cuda
         self.device = 'cuda:0' if T.cuda.is_available() else 'cpu'
 
     
-    def train(self, n_epochs, cuda=False):
+    def train(self, n_epochs):
         shutup.please()
         X = GetData(self.trade_frequency).make_global_tensor_no_time()
         M = GetData(self.trade_frequency).make_global_temporal_tensor()
-        T.cuda.is_available = lambda: cuda
         if self.long_only:
             agent = Agent(
                 kernel_size=2, 
