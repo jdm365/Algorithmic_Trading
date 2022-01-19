@@ -91,7 +91,11 @@ class Trainer():
             if epoch % 109 == 0:
                 print(f'Episode profits: {History}')
         plot_learning(Profit_History, 'Profit_History.png')
-        T.save(agent.state_dict(), 'RL_STJGCN_model.pt')
+        trained_model_directory = '/Trained_Models/'
+        T.save(agent.state_dict(), trained_model_directory + 'Agent.pt')
+        T.save(agent.network.state_dict(), trained_model_directory + 'Network.pt')
+        T.save(agent.network.STJGCN.state_dict(), trained_model_directory + 'STJGCN.pt')
+        T.save(agent.network.STJGCN.graph.state_dict(), trained_model_directory + 'Graph.pt')
 
 if __name__ == '__main__':
     DataFrequency = ['Minute', 'Hourly']
