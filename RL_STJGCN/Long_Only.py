@@ -169,7 +169,7 @@ class DilatedGraphConvolutionCell(nn.Module):
                 + T.mm(T.mm(L2, X_t), T.squeeze(self.W_backward[k, :, :])) \
                 + self.b
             Z += F.relu(x)
-            return Z.reshape(*Z.shape, 1)
+        return Z
 
     def conv_layer(self, input, time_features, dilation_factor):
         ###
@@ -178,13 +178,10 @@ class DilatedGraphConvolutionCell(nn.Module):
         # dilation_factor: int - dilation for conv layer
 
         # output: Tensor (n_nodes, n_data_features, lookback_window) - output of convolution operation
-        Z = T.zeros((self.n_nodes, self.n_features, 1), device=self.device)
+        Z = T.zeros((self.n_nodes, self.n_features, input.shape[-1] // dilation_factor), device=self.device)
         for t in range(input.shape[-1]):
             if (t + 1) % dilation_factor == 0:
-                if t != 1:
-                    Z = T.cat((Z, self.conv(input, time_features, self.gamma * t, self.gamma)), dim=-1)
-                else:
-                    Z = self.conv(input, time_features, self.gamma * t, self.gamma)
+                Z[:, :, t // dilation_factor] = self.conv(input, time_features, self.gamma * t, self.gamma)
         self.gamma *= dilation_factor
         return Z
 
