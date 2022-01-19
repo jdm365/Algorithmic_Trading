@@ -163,12 +163,15 @@ class DilatedGraphConvolutionCell(nn.Module):
         X = input
         for k in range(self.kernel_size):
             X_t = X[:, :, (idx // gamma) - k]
+            time1 = time.time()
             L1 = self.normalize_adjacency_matrix(time_features, idx, k * gamma)
             L2 = self.normalize_adjacency_matrix(time_features, idx, -k * gamma)
             x = T.mm(T.mm(L1, X_t), T.squeeze(self.W_forward[k, :, :])) \
                 + T.mm(T.mm(L2, X_t), T.squeeze(self.W_backward[k, :, :])) \
                 + self.b
             Z += F.relu(x)
+            time2=time.time()
+            print(time2-time1)
             return Z.reshape(*Z.shape, 1)
 
     def conv_layer(self, input, time_features, dilation_factor):

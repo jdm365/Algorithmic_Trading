@@ -22,8 +22,8 @@ class Trainer():
     
     def train(self, n_epochs):
         shutup.please()
-        X = GetData(self.trade_frequency).make_global_tensor_no_time()
-        M = GetData(self.trade_frequency).make_global_temporal_tensor()
+        X = GetData(self.trade_frequency).make_global_tensor_no_time().to(self.device)
+        M = GetData(self.trade_frequency).make_global_temporal_tensor().to(self.device)
         if self.long_only:
             agent = Agent(
                 kernel_size=2, 
@@ -90,10 +90,10 @@ class Trainer():
 
             if epoch % 109 == 0:
                 print(f'Episode profits: {History}')
-        plot_learning(Profit_History)
+        plot_learning(Profit_History, 'Profit_History.png')
         T.save(agent.state_dict(), 'RL_STJGCN_model.pt')
 
 if __name__ == '__main__':
     DataFrequency = ['Minute', 'Hourly']
-    Train = Trainer(DataFrequency[1], cuda=False)
-    Train.train(n_epochs=5000)
+    Train = Trainer(DataFrequency[1], cuda=True)
+    Train.train(n_epochs=7500)
