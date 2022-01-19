@@ -75,7 +75,8 @@ class GraphConstructor(nn.Module):
         x = T.mm(T.mm(U1, self.B), T.transpose(U2, 0, 1))
         x = T.tensor([i if i >= self.delta_min else 0 \
             for i in T.flatten(x)]).reshape(x.shape)
-        return x.float().softmax(dim=-1)
+        adj = x.float().softmax(dim=-1).to(self.device)
+        return adj
 
 
 class DilatedGraphConvolutionCell(nn.Module):
@@ -139,8 +140,8 @@ class DilatedGraphConvolutionCell(nn.Module):
 
         # output: Tensor (n_nodes, n_nodes) - normalized adjacency matrix
         adjacency_matrix = self.graph.create_adjacency_matrix(time_features, idx, time_diff)
-        degree_matrix = T.eye(adjacency_matrix.shape[0]) * adjacency_matrix.sum(-1)
-        D = T.inverse(T.tensor(sqrtm(degree_matrix), dtype=T.float, device=self.device))
+        degree_matrix = T.eye(adjacency_matrix.shape[0]) * adjacency_matrix.clone().cpu().sum(-1)
+        D = T.inverse(T.tensor(sqrtm(degree_matrix.cpu()), dtype=T.float, device=self.device))
         return T.mm(T.mm(D, adjacency_matrix), D)
 
     def fully_connected(self, observation):
@@ -177,7 +178,7 @@ class DilatedGraphConvolutionCell(nn.Module):
         # dilation_factor: int - dilation for conv layer
 
         # output: Tensor (n_nodes, n_data_features, lookback_window) - output of convolution operation
-        Z = T.zeros(self.n_nodes, self.n_features, 1)
+        Z = T.zeros((self.n_nodes, self.n_features, 1), device=self.device)
         for t in range(input.shape[-1]):
             if (t + 1) % dilation_factor == 0:
                 if t == 1:
@@ -279,7 +280,7 @@ class AttentionOutputModule(nn.Module):
         for node in range(HS.shape[1]):
             Z = T.zeros(1)
             for layer in range(HS.shape[0]):
-                s = self.lin(HS[layer, node, :])
+                s = self.lin(HS[layer, node, :].to(self.device)).to('cpu')
                 Z += T.exp(s)
                 alpha[layer, node] = T.exp(s)
             alpha[:, node] = alpha[:, node].clone() / Z

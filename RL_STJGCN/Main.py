@@ -86,14 +86,14 @@ class Trainer():
 
             Profits = capital - 10000
             Profit_History.append(Profits.detach().numpy())
-            History = np.mean(Profit_History[-10:])
+            History = np.mean(Profit_History[-190:])
 
-            if epoch % 10 == 0:
+            if epoch % 109 == 0:
                 print(f'Episode profits: {History}')
         plot_learning(Profit_History)
         T.save(agent.state_dict(), 'RL_STJGCN_model.pt')
 
 if __name__ == '__main__':
     DataFrequency = ['Minute', 'Hourly']
-    Train = Trainer(DataFrequency[1])
-    Train.train(n_epochs=1000)
+    Train = Trainer(DataFrequency[1], cuda=False)
+    Train.train(n_epochs=5000)
