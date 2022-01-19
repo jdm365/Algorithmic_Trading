@@ -336,8 +336,8 @@ class Agent(nn.Module):
         delta = 5e-3
         c_factor = 0.0025
         done = False
-        price_change_vector = T.squeeze(observation[:, 2, -1]).to(self.device)
-        w_prime = T.mul(last_action, price_change_vector).to(self.device)
+        price_change_vector = T.squeeze(observation[:, 2, -1])
+        w_prime = T.mul(last_action, price_change_vector)
         mu = c_factor * T.sum(T.abs(w_prime - action))
         while not done:
             mu_ = (1 - c_factor * w_prime[0] - (2*c_factor - c_factor**2) * T.sum(F.relu(w_prime[1:] - mu * action[1:]))) / (1 - c_factor * action[0])
