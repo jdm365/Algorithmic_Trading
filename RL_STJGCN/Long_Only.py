@@ -181,7 +181,7 @@ class DilatedGraphConvolutionCell(nn.Module):
         Z = T.zeros((self.n_nodes, self.n_features, 1), device=self.device)
         for t in range(input.shape[-1]):
             if (t + 1) % dilation_factor == 0:
-                if t == 1:
+                if t != 1:
                     Z = T.cat((Z, self.conv(input, time_features, self.gamma * t, self.gamma)), dim=-1)
                 else:
                     Z = self.conv(input, time_features, self.gamma * t, self.gamma)
@@ -199,8 +199,11 @@ class DilatedGraphConvolutionCell(nn.Module):
         output = []
         Z = self.X
         for dilation_factor in self.dilation_list:
+            time1 = time.time()
             Z = self.conv_layer(input=Z, time_features=time_features, dilation_factor=dilation_factor)
             output.append(Z[:, :, -1])
+            time2 = time.time()
+            #print(time2 - time1)
         return output
 
 
