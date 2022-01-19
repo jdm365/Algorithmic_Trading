@@ -10,7 +10,7 @@ from scipy.linalg import sqrtm
 from pathlib import Path
 
 class GraphConstructor(nn.Module):
-    def __init__(self, n_nodes, n_features, lookback_window, time_features=15+5+4+12, delta_min=0.05):
+    def __init__(self, n_nodes, n_features, lookback_window, n_time_features, delta_min=0.05):
         super(GraphConstructor, self).__init__()
         ### 
         # n_nodes: int - number of nodes/assets
@@ -22,7 +22,7 @@ class GraphConstructor(nn.Module):
         self.layer_initial = init.xavier_normal_(T.ones(lookback_window, n_nodes))
         self.lookback_window = lookback_window
         self.n_features = n_features
-        self.time_features = time_features
+        self.time_features = n_time_features
         self.delta_min = delta_min
 
         fc1_dims = 256
@@ -33,7 +33,7 @@ class GraphConstructor(nn.Module):
             nn.ReLU()
         )
         self.temporal = nn.Sequential(
-            nn.Linear(time_features, fc1_dims),
+            nn.Linear(n_time_features, fc1_dims),
             nn.ReLU(),
             nn.Linear(fc1_dims, n_nodes * n_features),
             nn.ReLU()
@@ -79,7 +79,7 @@ class GraphConstructor(nn.Module):
 
 class DilatedGraphConvolutionCell(nn.Module):
     def __init__(self, kernel_size, n_data_features, dilation_list, 
-    fc1_dims, fc2_dims, n_features, n_nodes, lookback_window):
+    fc1_dims, fc2_dims, n_features, n_nodes, lookback_window, n_time_features):
         super(DilatedGraphConvolutionCell, self).__init__()
         ### 
         # kernel_size: int - size of kernel for convolution
@@ -108,7 +108,8 @@ class DilatedGraphConvolutionCell(nn.Module):
         self.graph = GraphConstructor(
             self.n_nodes, 
             self.n_features, 
-            self.lookback_window
+            self.lookback_window,
+            n_time_features
         )
 
         self.FC = nn.Sequential(
@@ -202,7 +203,7 @@ class DilatedGraphConvolutionCell(nn.Module):
 
 class AttentionOutputModule(nn.Module):
     def __init__(self, kernel_size, n_data_features, dilation_list, 
-    fc1_dims, fc2_dims, n_features, n_nodes, lookback_window, margin):
+    fc1_dims, fc2_dims, n_features, n_nodes, lookback_window, margin, n_time_features):
         super(AttentionOutputModule, self).__init__()
         ### 
         # kernel_size: int - size of kernel for convolution
@@ -237,7 +238,8 @@ class AttentionOutputModule(nn.Module):
             fc2_dims=fc2_dims,
             n_features=n_features,
             n_nodes=n_nodes,
-            lookback_window=lookback_window
+            lookback_window=lookback_window,
+            n_time_features=n_time_features
         )
 
         self.v = nn.Parameter(T.randn(n_features, 1))
@@ -310,7 +312,7 @@ class AttentionOutputModule(nn.Module):
 class Agent(nn.Module):
     def __init__(self, kernel_size, n_data_features, dilation_list, 
     fc1_dims, fc2_dims, n_features, n_nodes, lookback_window,
-    minibatch_size, margin):
+    minibatch_size, margin, n_time_features):
         super(Agent, self).__init__()
         ###
         # minibatch_size: int
@@ -325,7 +327,8 @@ class Agent(nn.Module):
             n_features=n_features, 
             n_nodes=n_nodes, 
             lookback_window=lookback_window,
-            margin=margin
+            margin=margin,
+            n_time_features=n_time_features
         )
         
         self.optimizer = T.optim.Adam(self.parameters(), lr=1e-3)
@@ -368,8 +371,12 @@ class Agent(nn.Module):
 
 
 class GetData():
-    def __init__(self):
-        self.filepath = str(Path(__file__).parent) + '/Minute_Data_v1/'
+    def __init__(self, trade_frequency):
+        filename = '/' + trade_frequency + '_Data_v1/'
+        self.filepath = str(Path(__file__).parent) + filename
+        self.years = 4
+        if trade_frequency == 'Hourly':
+            self.years = 6
 
     def make_DF(self):
         DFNEW = pd.DataFrame()
@@ -397,7 +404,7 @@ class GetData():
     def make_global_temporal_tensor(self):
         df = self.make_DF()
         arr = np.array(df)[:, 0]
-        M = T.zeros((arr.shape[0], 36))
+        M = T.zeros((arr.shape[0], 36 + self.years))
         for i in range(1, arr.shape[0]):
             base = arr[i]
 
@@ -407,10 +414,12 @@ class GetData():
             day = T.tensor(datetime.strptime(base[:10].replace('.', ' '), '%d %m %Y').isoweekday())
             week = T.tensor(abs(int(base[:2]) - 4) // 7)
             month = T.tensor(int(base[3:5]))
+            year = T.tensor(int(base[8:10]) - 22)
 
             half_hour = F.one_hot(half_hour-1, 15)
             day = F.one_hot(day-1, 5)
             week = F.one_hot(week, 4)
             month = F.one_hot(month-1, 12)
-            M[i, :] = T.cat((half_hour, day, week, month))
+            year = F.one_hot(year, self.years)
+            M[i, :] = T.cat((half_hour, day, week, month, year))
         return M[1:, :]

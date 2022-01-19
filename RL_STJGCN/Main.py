@@ -14,6 +14,9 @@ class Trainer():
         self.margin = 1.5
         T.cuda.is_available = lambda: cuda
         self.device = 'cuda:0' if T.cuda.is_available() else 'cpu'
+        self.n_time_features = 36 + 4
+        if trade_frequency == 'Hourly':
+            self.n_time_features = 36 + 6
 
     
     def train(self, n_epochs):
@@ -30,7 +33,8 @@ class Trainer():
                 n_features=64, 
                 n_nodes=X.shape[0], 
                 lookback_window=64,
-                minibatch_size=self.minibatch_size
+                minibatch_size=self.minibatch_size,
+                n_time_features=self.n_time_features
             )
         else:
             agent = ShortAgent(
@@ -43,7 +47,8 @@ class Trainer():
                 n_nodes=X.shape[0], 
                 lookback_window=64,
                 minibatch_size=self.minibatch_size,
-                margin=self.margin
+                margin=self.margin,
+                n_time_features=self.n_time_features
             )
         Profit_History = []
         for epoch in tqdm(range(n_epochs)):
