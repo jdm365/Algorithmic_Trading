@@ -8,6 +8,7 @@ import os
 from datetime import datetime, time
 from scipy.linalg import sqrtm
 from pathlib import Path
+import time
 
 class GraphConstructor(nn.Module):
     def __init__(self, n_nodes, n_features, lookback_window, n_time_features, delta_min=0.05):
@@ -132,18 +133,18 @@ class DilatedGraphConvolutionCell(nn.Module):
 
     def normalize_adjacency_matrix(self, time_features, idx, time_diff):
         ###
-        # time_features: Tensor (n_nodes, 15+5+4+12, lookback_window)
+        # time_features: Tensor (n_nodes, n_time_features, lookback_window)
         # idx: int - current time step
         # time_diff: int - difference between timesteps for ST graph construction
 
         # output: Tensor (n_nodes, n_nodes) - normalized adjacency matrix
         adjacency_matrix = self.graph.create_adjacency_matrix(time_features, idx, time_diff)
         degree_matrix = T.eye(adjacency_matrix.shape[0]) * adjacency_matrix.sum(-1)
-        D = T.inverse(T.tensor(sqrtm(degree_matrix), dtype=T.float))
-        return T.mm(T.mm(D, adjacency_matrix), D).to(self.device)
+        D = T.inverse(T.tensor(sqrtm(degree_matrix), dtype=T.float, device=self.device))
+        return T.mm(T.mm(D, adjacency_matrix), D)
 
     def fully_connected(self, observation):
-        observation = observation.detach()
+        observation = observation.clone()
         obs = T.flatten(observation.permute(2, 0, 1).contiguous(), start_dim=1).to(self.device)
         X = self.FC(obs).reshape(self.lookback_window, self.n_nodes, self.n_features)
         X = X.permute(1, 2, 0).contiguous()
@@ -176,11 +177,12 @@ class DilatedGraphConvolutionCell(nn.Module):
         # dilation_factor: int - dilation for conv layer
 
         # output: Tensor (n_nodes, n_data_features, lookback_window) - output of convolution operation
+        Z = T.zeros(self.n_nodes, self.n_features, 1)
         for t in range(input.shape[-1]):
             if (t + 1) % dilation_factor == 0:
-                try:
+                if t == 1:
                     Z = T.cat((Z, self.conv(input, time_features, self.gamma * t, self.gamma)), dim=-1)
-                except UnboundLocalError:
+                else:
                     Z = self.conv(input, time_features, self.gamma * t, self.gamma)
         self.gamma *= dilation_factor
         return Z
@@ -195,7 +197,7 @@ class DilatedGraphConvolutionCell(nn.Module):
         self.gamma = 1
         output = []
         Z = self.X
-        for layer, dilation_factor in enumerate(self.dilation_list):
+        for dilation_factor in self.dilation_list:
             Z = self.conv_layer(input=Z, time_features=time_features, dilation_factor=dilation_factor)
             output.append(Z[:, :, -1])
         return output
@@ -269,19 +271,19 @@ class AttentionOutputModule(nn.Module):
         # HS: Tensor (n_conv_layers, n_nodes, n_features)
 
         # output: Tensor (n_conv_layers, n_nodes) - attention weights
-        HS = T.randn((len(hidden_states), *hidden_states[0].shape), device=self.device)
-        alpha = T.zeros((len(hidden_states), self.n_nodes), device=self.device)
+        HS = T.randn((len(hidden_states), *hidden_states[0].shape))
+        alpha = T.zeros((len(hidden_states), self.n_nodes))
 
         for idx, state in enumerate(hidden_states):
             HS[idx, :, :] = state
         for node in range(HS.shape[1]):
-            Z = T.zeros(1, device=self.device).clone()
+            Z = T.zeros(1)
             for layer in range(HS.shape[0]):
-                s = self.lin(HS[layer, node, :].clone())
+                s = self.lin(HS[layer, node, :])
                 Z += T.exp(s)
                 alpha[layer, node] = T.exp(s)
             alpha[:, node] = alpha[:, node].clone() / Z
-        return alpha.reshape(*alpha.shape, 1), HS
+        return alpha.reshape(*alpha.shape, 1).to(self.device), HS.to(self.device)
 
     def compute_att_weighted_conv_output(self, observation, time_features):
         ###
