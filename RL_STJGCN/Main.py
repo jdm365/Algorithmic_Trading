@@ -1,6 +1,7 @@
 import torch as T
 import shutup
 import numpy as np
+from torch._C import device
 from tqdm import tqdm
 from RL_STJGCN.Long_Only import GetData, Agent
 from RL_STJGCN.Long_Short import Agent as ShortAgent
@@ -70,7 +71,7 @@ class Trainer():
                 cntr += 1
                 if cntr % agent.minibatch_size == 0:
                     done = True
-            Loss = -Reward
+            Loss = -Reward.to(self.device)
             Loss.backward()
 
             agent.optimizer.step()

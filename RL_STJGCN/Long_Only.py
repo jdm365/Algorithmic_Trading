@@ -336,9 +336,6 @@ class Agent(nn.Module):
         delta = 5e-3
         c_factor = 0.0025
         done = False
-        observation = observation.detach()
-        action = action.detach()
-        last_action = last_action.detach()
         price_change_vector = T.squeeze(observation[:, 2, -1]).to(self.device)
         w_prime = T.mul(last_action, price_change_vector).to(self.device)
         mu = c_factor * T.sum(T.abs(w_prime - action))
@@ -353,11 +350,13 @@ class Agent(nn.Module):
     def step(self, observation, time_features, last_action):
         observation = observation.to(self.device)
         time_features = time_features.to(self.device)
-        action = self.network.forward(observation, time_features, last_action)
+        action = self.network.forward(observation, time_features, last_action).to('cpu')
+        observation = observation.to('cpu')
+        last_action = last_action.to('cpu')
         price_change_vector = observation[:, 2, -1]
         mu = self.calculate_commisions_factor(observation, action, last_action)
         reward = T.log(mu * T.dot(last_action, price_change_vector)) / self.minibatch_size
-        return action, reward
+        return action.to(self.device), reward
 
 
 class GetData():
