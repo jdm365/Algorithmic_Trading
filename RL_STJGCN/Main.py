@@ -86,7 +86,7 @@ class Trainer():
 
             Profits = capital - 10000
             Profit_History.append(Profits.detach().numpy())
-            History = np.mean(Profit_History[-190:])
+            History = np.mean(Profit_History[-100:])
 
             if epoch % 109 == 0:
                 print(f'Episode profits: {History}')
