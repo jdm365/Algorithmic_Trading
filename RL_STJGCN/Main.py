@@ -93,5 +93,6 @@ class Trainer():
         T.save(agent.state_dict(), 'RL_STJGCN_model.pt')
 
 if __name__ == '__main__':
-    Train = Trainer('Hourly')
+    DataFrequency = ['Minute', 'Hourly']
+    Train = Trainer(DataFrequency[1])
     Train.train(n_epochs=1000)
