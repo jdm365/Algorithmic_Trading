@@ -1,7 +1,6 @@
 import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn import init
 import numpy as np
 import pandas as pd
 import os
@@ -20,7 +19,7 @@ class GraphConstructor(nn.Module):
         # delta_min: float - minimum weight to consider in adjacency matrices
 
         self.n_nodes = n_nodes
-        self.layer_initial = init.xavier_normal_(T.ones(lookback_window, n_nodes))
+        self.layer_initial = T.randn(lookback_window, n_nodes)
         self.lookback_window = lookback_window
         self.n_features = n_features
         self.time_features = n_time_features
@@ -53,7 +52,7 @@ class GraphConstructor(nn.Module):
 
         # output: Tensor (n_nodes, n_features, lookback_window) - spatio-temporal embedding for each 
         #                                                         node at each time step.
-        embedding = T.add(self.spatial(self.layer_initial.to(self.device)), self.temporal(time_features))
+        embedding = T.add(self.spatial(self.layer_initial), self.temporal(time_features))
         embedding = embedding.reshape(self.lookback_window, self.n_nodes, self.n_features)
         return embedding.permute(1, 0, 2).contiguous()
 
@@ -149,7 +148,7 @@ class DilatedGraphConvolutionCell(nn.Module):
         obs = T.flatten(observation.permute(2, 0, 1).contiguous(), start_dim=1).to(self.device)
         X = self.FC(obs).reshape(self.lookback_window, self.n_nodes, self.n_features)
         X = X.permute(1, 2, 0).contiguous()
-        self.X = X
+        self.X = X 
 
     def conv(self, input, time_features, idx, gamma):
         ###
@@ -272,19 +271,19 @@ class AttentionOutputModule(nn.Module):
         # HS: Tensor (n_conv_layers, n_nodes, n_features)
 
         # output: Tensor (n_conv_layers, n_nodes) - attention weights
-        HS = T.randn((len(hidden_states), *hidden_states[0].shape))
-        alpha = T.zeros((len(hidden_states), self.n_nodes))
+        HS = T.randn((len(hidden_states), *hidden_states[0].shape), device=self.device)
+        alpha = T.zeros((len(hidden_states), self.n_nodes), device=self.device)
 
         for idx, state in enumerate(hidden_states):
             HS[idx, :, :] = state
         for node in range(HS.shape[1]):
-            Z = T.zeros(1)
+            Z = T.zeros(1, device=self.device)
             for layer in range(HS.shape[0]):
-                s = self.lin(HS[layer, node, :].to(self.device)).to('cpu')
+                s = self.lin(HS[layer, node, :])
                 Z += T.exp(s)
                 alpha[layer, node] = T.exp(s)
             alpha[:, node] = alpha[:, node].clone() / Z
-        return alpha.reshape(*alpha.shape, 1).to(self.device), HS.to(self.device)
+        return alpha.reshape(*alpha.shape, 1).to(self.device), HS
 
     def compute_att_weighted_conv_output(self, observation, time_features):
         ###
@@ -354,10 +353,13 @@ class Agent(nn.Module):
         observation = observation.to(self.device)
         time_features = time_features.to(self.device)
         action = self.network.forward(observation, time_features, last_action).to('cpu')
+        time1 = time.time()
         observation = observation.to('cpu')
         last_action = last_action.to('cpu')
         price_change_vector = observation[:, 2, -1]
         mu = self.calculate_commisions_factor(observation, action, last_action)
+        time2 = time.time()
+        print(time2-time1)
         reward = T.log(mu * T.dot(last_action, price_change_vector)) / self.minibatch_size
         return action.to(self.device), reward
 
