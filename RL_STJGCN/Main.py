@@ -19,7 +19,7 @@ class Trainer():
         self.n_time_features = 36 + 4
         if trade_frequency == 'Hourly':
             self.n_time_features = 36 + 6
-        self.directory = str(Path(__file__).parent) + '/RL_STJGCN/'
+        self.directory = str(Path(__file__).parent) + '/'
 
     
     def train(self, n_epochs):
@@ -53,7 +53,7 @@ class Trainer():
                 margin=self.margin,
                 n_time_features=self.n_time_features
             )
-        bnh_agent = Agent(X)
+        bnh_agent = BuyAndHold(X)
         Profit_History = []
         Relative_Profit_History = []
         for epoch in tqdm(range(n_epochs)):
@@ -93,10 +93,10 @@ class Trainer():
             Profits = capital - 10000
             BnH_Profits = bnh_capital - 10000
             Relative_Profits = Profits - BnH_Profits
-            Profit_History.append(Profits.detach().numpy())
-            Relative_Profit_History.append(Relative_Profits.detach().numpy())
+            Profit_History.append(Profits.detach().cpu().numpy())
+            Relative_Profit_History.append(Relative_Profits.detach().cpu().numpy())
             History = np.mean(Profit_History[-100:])
-            Relative_History = np.mean(Profit_History[-100:])
+            Relative_History = np.mean(Relative_Profit_History[-100:])
 
             if epoch % 100 == 0:
                 print(f'Episode profits: {History}')
@@ -140,7 +140,6 @@ class Trainer():
         bnh_agent = BuyAndHold(X)
         
         self.load_models(agent)
-        done = False
         time_initial = np.random.randint(agent.network.lookback_window, \
             X.shape[-1] - run_length)
         cntr = 0
@@ -149,20 +148,17 @@ class Trainer():
         last_action = (self.margin * ((T.rand(X.shape[0])).softmax(dim=0))).to(self.device)
         if self.long_only:
             last_action = (T.rand(X.shape[0])).softmax(dim=0).to(self.device)
-        while done is False:
+        for _ in tqdm(range(run_length)):
             observation = X[:, :, time_initial + cntr - agent.network.lookback_window:cntr + time_initial]
             time_features = M[time_initial + cntr - agent.network.lookback_window:cntr + time_initial, :]
             last_action, reward = agent.step(observation, time_features, last_action)
             bnh_capital *= bnh_agent.step(observation)
             capital *= T.exp(reward * agent.minibatch_size)
-            cntr += 1
-            if cntr == run_length:
-                done = True
         Profits = 10000 - capital
         BnH_Profits = 10000 - bnh_capital
         print(f'Final agent profits: ${Profits}')
         print(f'Final agent buy and hold profits: ${BnH_Profits}')
-
+	
     def save_models(self, agent):
         trained_model_directory = self.directory + 'Trained_Models/'
         T.save(agent.state_dict(), trained_model_directory + 'Agent.pt')
@@ -172,13 +168,13 @@ class Trainer():
     
     def load_models(self, agent):
         trained_model_directory = self.directory + 'Trained_Models/'
-        T.load(agent.state_dict(), trained_model_directory + 'Agent.pt')
-        T.load(agent.network.state_dict(), trained_model_directory + 'Network.pt')
-        T.load(agent.network.STJGCN.state_dict(), trained_model_directory + 'STJGCN.pt')
-        T.load(agent.network.STJGCN.graph.state_dict(), trained_model_directory + 'Graph.pt')
+        agent.load_state_dict(T.load(trained_model_directory + 'Agent.pt'))
+        agent.network.load_state_dict(T.load(trained_model_directory + 'Network.pt'))
+        agent.network.STJGCN.load_state_dict(T.load(trained_model_directory + 'STJGCN.pt'))
+        agent.network.STJGCN.graph.load_state_dict(T.load(trained_model_directory + 'Graph.pt'))
 
 if __name__ == '__main__':
     DataFrequency = ['Minute', 'Hourly']
-    Train = Trainer(DataFrequency[1], cuda=True)
-    Train.train(n_epochs=7500)
-    #Train.test(run_length=1500)
+    Train = Trainer(DataFrequency[1], cuda=False)
+    Train.train(n_epochs=500)
+    Train.test(run_length=1500)

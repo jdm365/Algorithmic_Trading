@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import torch as T
+import torch.nn as nn
 
 def plot_learning(scores, filename=None, x=None, window=5):   
     N = len(scores)
@@ -15,16 +16,17 @@ def plot_learning(scores, filename=None, x=None, window=5):
     if filename:
       plt.savefig(filename)
 
-class BuyAndHold():
+class BuyAndHold(nn.Module):
     def __init__(self, data):
-        self.inital_action = T.ones(data.shape[0], device=self.device) / data.shape[0]
+        super(BuyAndHold, self).__init__()
+        self.inital_action = T.ones(data.shape[0]) / data.shape[0]
 
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
 
     def step(self, observation):
         price_change_vector = observation[:, 2, -1]
-        profit = T.dot(self.inital_action, price_change_vector)
-        return self.inital_action, profit
+        profit = T.dot(self.inital_action.to(self.device), price_change_vector)
+        return profit
 
 

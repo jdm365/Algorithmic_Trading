@@ -52,7 +52,8 @@ class GraphConstructor(nn.Module):
 
         # output: Tensor (n_nodes, n_features, lookback_window) - spatio-temporal embedding for each 
         #                                                         node at each time step.
-        embedding = T.add(self.spatial(self.layer_initial), self.temporal(time_features))
+        layer_initial = T.randn(self.lookback_window, self.n_nodes, device=self.device)
+        embedding = T.add(self.spatial(layer_initial), self.temporal(time_features))
         embedding = embedding.reshape(self.lookback_window, self.n_nodes, self.n_features)
         return embedding.permute(1, 0, 2).contiguous()
 
@@ -353,13 +354,10 @@ class Agent(nn.Module):
         observation = observation.to(self.device)
         time_features = time_features.to(self.device)
         action = self.network.forward(observation, time_features, last_action).to('cpu')
-        time1 = time.time()
         observation = observation.to('cpu')
         last_action = last_action.to('cpu')
         price_change_vector = observation[:, 2, -1]
         mu = self.calculate_commisions_factor(observation, action, last_action)
-        time2 = time.time()
-        print(time2-time1)
         reward = T.log(mu * T.dot(last_action, price_change_vector)) / self.minibatch_size
         return action.to(self.device), reward
 
