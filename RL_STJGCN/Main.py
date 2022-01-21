@@ -148,7 +148,7 @@ class Trainer():
         last_action = (self.margin * ((T.rand(X.shape[0])).softmax(dim=0))).to(self.device)
         if self.long_only:
             last_action = (T.rand(X.shape[0])).softmax(dim=0).to(self.device)
-        for _ in tqdm(range(run_length)):
+        for cntr in tqdm(range(run_length)):
             observation = X[:, :, time_initial + cntr - agent.network.lookback_window:cntr + time_initial]
             time_features = M[time_initial + cntr - agent.network.lookback_window:cntr + time_initial, :]
             last_action, reward = agent.step(observation, time_features, last_action)
