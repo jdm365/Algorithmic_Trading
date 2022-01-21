@@ -117,8 +117,10 @@ class DilatedGraphConvolutionCell(nn.Module):
         self.FC = nn.Sequential(
             nn.Linear(n_nodes * n_data_features, fc1_dims),
             nn.ReLU(),
+            nn.LayerNorm(fc1_dims),
             nn.Linear(fc1_dims, fc2_dims),
             nn.ReLU(),
+            nn.LayerNorm(fc2_dims),
             nn.Linear(fc2_dims, n_nodes * n_features),
             nn.ReLU()
         )
@@ -245,7 +247,7 @@ class AttentionOutputModule(nn.Module):
         )
 
         self.v = nn.Parameter(T.randn(n_features, 1))
-        self.last_action_weights = nn.Parameter(T.randn(n_nodes, 1))
+        self.last_action_weights = nn.Parameter(T.randn(n_nodes, 1)/1000)
         self.lin = nn.Sequential(
             nn.Linear(self.n_features, self.n_features),
             nn.LayerNorm(self.n_features),
@@ -256,10 +258,12 @@ class AttentionOutputModule(nn.Module):
         self.FC = nn.Sequential(
             nn.Linear(n_nodes * n_features, 512),
             nn.ReLU(),
+            nn.LayerNorm(512),
             nn.Linear(512, 256),
             nn.ReLU(),
+            nn.LayerNorm(256),
             nn.Linear(256, n_nodes),
-            nn.LayerNorm(n_nodes, 1)
+            nn.ReLU()
         )
         self.optimizer = T.optim.Adam(self.parameters(), lr=1e-3)
 
@@ -306,7 +310,8 @@ class AttentionOutputModule(nn.Module):
         # output: Tensor (n_nodes) - action (new portfloio weights)
         Y = T.flatten(self.compute_att_weighted_conv_output(observation, time_features))
         action = self.FC(Y).reshape(*last_action.shape, 1)
-        last_weights = T.mul(self.last_action_weights / 100, last_action.reshape(*last_action.shape, 1))
+        last_weights = T.mul(self.last_action_weights, last_action.reshape(*last_action.shape, 1))
+        print(action, last_weights)
         return T.squeeze(F.softmax(action + last_weights, dim=0))
 
 
@@ -337,7 +342,7 @@ class Agent(nn.Module):
 
     def calculate_commisions_factor(self, observation, action, last_action):
         delta = 5e-3
-        c_factor = 0.0025
+        c_factor = 0.00025
         done = False
         price_change_vector = T.squeeze(observation[:, 2, -1])
         w_prime = T.mul(last_action, price_change_vector)

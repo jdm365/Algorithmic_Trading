@@ -153,7 +153,6 @@ class Trainer():
             time_features = M[time_initial + cntr - agent.network.lookback_window:cntr + time_initial, :]
             last_action, reward = agent.step(observation, time_features, last_action)
             bnh_capital *= bnh_agent.step(observation)
-            print(observation[0:2, 2, -1])
             capital *= T.exp(reward * agent.minibatch_size)
         Profits = 10000 - capital
         BnH_Profits = 10000 - bnh_capital
@@ -179,5 +178,5 @@ class Trainer():
 if __name__ == '__main__':
     DataFrequency = ['Minute', 'Hourly']
     Train = Trainer(DataFrequency[1], cuda=False)
-    #Train.train(n_epochs=500)
-    Train.test(run_length=1500)
+    Train.train(n_epochs=500)
+    #Train.test(run_length=1500)
