@@ -101,18 +101,12 @@ class Trainer():
             if epoch % 100 == 0:
                 print(f'Episode profits: {History}')
                 print(f'Episode relative profits: {Relative_History}')
+                self.save_models(agent)
 
         plot_learning(Profit_History, 'Profit_History.png')
         plot_learning(Relative_Profit_History, 'Relative_Profit_History.png')
-
-        trained_model_directory = self.directory + 'Trained_Models/'
-        T.save(agent.state_dict(), trained_model_directory + 'Agent.pt')
-        T.save(agent.network.state_dict(), trained_model_directory + 'Network.pt')
-        T.save(agent.network.STJGCN.state_dict(), trained_model_directory + 'STJGCN.pt')
-        T.save(agent.network.STJGCN.graph.state_dict(), trained_model_directory + 'Graph.pt')
     
     def test(self, run_length):
-        trained_model_directory = self.directory + 'Trained_Models/'
         shutup.please()
         X = GetData(self.trade_frequency).make_global_tensor_no_time().to(self.device)
         M = GetData(self.trade_frequency).make_global_temporal_tensor().to(self.device)
@@ -144,12 +138,8 @@ class Trainer():
                 n_time_features=self.n_time_features
             )
         bnh_agent = BuyAndHold(X)
-
-        T.load(agent.state_dict(), trained_model_directory + 'Agent.pt')
-        T.load(agent.network.state_dict(), trained_model_directory + 'Network.pt')
-        T.load(agent.network.STJGCN.state_dict(), trained_model_directory + 'STJGCN.pt')
-        T.load(agent.network.STJGCN.graph.state_dict(), trained_model_directory + 'Graph.pt')
-
+        
+        self.load_models(agent)
         done = False
         time_initial = np.random.randint(agent.network.lookback_window, \
             X.shape[-1] - run_length)
@@ -172,6 +162,20 @@ class Trainer():
         BnH_Profits = 10000 - bnh_capital
         print(f'Final agent profits: ${Profits}')
         print(f'Final agent buy and hold profits: ${BnH_Profits}')
+
+    def save_models(self, agent):
+        trained_model_directory = self.directory + 'Trained_Models/'
+        T.save(agent.state_dict(), trained_model_directory + 'Agent.pt')
+        T.save(agent.network.state_dict(), trained_model_directory + 'Network.pt')
+        T.save(agent.network.STJGCN.state_dict(), trained_model_directory + 'STJGCN.pt')
+        T.save(agent.network.STJGCN.graph.state_dict(), trained_model_directory + 'Graph.pt')
+    
+    def load_models(self, agent):
+        trained_model_directory = self.directory + 'Trained_Models/'
+        T.load(agent.state_dict(), trained_model_directory + 'Agent.pt')
+        T.load(agent.network.state_dict(), trained_model_directory + 'Network.pt')
+        T.load(agent.network.STJGCN.state_dict(), trained_model_directory + 'STJGCN.pt')
+        T.load(agent.network.STJGCN.graph.state_dict(), trained_model_directory + 'Graph.pt')
 
 if __name__ == '__main__':
     DataFrequency = ['Minute', 'Hourly']
