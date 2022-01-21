@@ -153,6 +153,7 @@ class Trainer():
             time_features = M[time_initial + cntr - agent.network.lookback_window:cntr + time_initial, :]
             last_action, reward = agent.step(observation, time_features, last_action)
             bnh_capital *= bnh_agent.step(observation)
+            print(observation[0:2, 2, -1])
             capital *= T.exp(reward * agent.minibatch_size)
         Profits = 10000 - capital
         BnH_Profits = 10000 - bnh_capital
@@ -165,9 +166,11 @@ class Trainer():
         T.save(agent.network.state_dict(), trained_model_directory + 'Network.pt')
         T.save(agent.network.STJGCN.state_dict(), trained_model_directory + 'STJGCN.pt')
         T.save(agent.network.STJGCN.graph.state_dict(), trained_model_directory + 'Graph.pt')
+        print('...saving models...')
     
     def load_models(self, agent):
         trained_model_directory = self.directory + 'Trained_Models/'
+        print('...loading models...')
         agent.load_state_dict(T.load(trained_model_directory + 'Agent.pt'))
         agent.network.load_state_dict(T.load(trained_model_directory + 'Network.pt'))
         agent.network.STJGCN.load_state_dict(T.load(trained_model_directory + 'STJGCN.pt'))
@@ -176,5 +179,5 @@ class Trainer():
 if __name__ == '__main__':
     DataFrequency = ['Minute', 'Hourly']
     Train = Trainer(DataFrequency[1], cuda=False)
-    Train.train(n_epochs=500)
+    #Train.train(n_epochs=500)
     Train.test(run_length=1500)
