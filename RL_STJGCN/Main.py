@@ -6,6 +6,7 @@ from tqdm import tqdm
 from RL_STJGCN.Long_Only import GetData, Agent
 from RL_STJGCN.Long_Short import Agent as ShortAgent
 from utils import plot_learning, BuyAndHold
+from pathlib import Path
 
 class Trainer():
     def __init__(self, trade_frequency, minibatch_size=30, long_only=True, cuda=False):
@@ -18,6 +19,7 @@ class Trainer():
         self.n_time_features = 36 + 4
         if trade_frequency == 'Hourly':
             self.n_time_features = 36 + 6
+        self.directory = str(Path(__file__).parent) + '/RL_STJGCN/'
 
     
     def train(self, n_epochs):
@@ -103,14 +105,14 @@ class Trainer():
         plot_learning(Profit_History, 'Profit_History.png')
         plot_learning(Relative_Profit_History, 'Relative_Profit_History.png')
 
-        trained_model_directory = '/Trained_Models/'
+        trained_model_directory = self.directory + 'Trained_Models/'
         T.save(agent.state_dict(), trained_model_directory + 'Agent.pt')
         T.save(agent.network.state_dict(), trained_model_directory + 'Network.pt')
         T.save(agent.network.STJGCN.state_dict(), trained_model_directory + 'STJGCN.pt')
         T.save(agent.network.STJGCN.graph.state_dict(), trained_model_directory + 'Graph.pt')
     
     def test(self, run_length):
-        trained_model_directory = '/Trained_Models/'
+        trained_model_directory = self.directory + 'Trained_Models/'
         shutup.please()
         X = GetData(self.trade_frequency).make_global_tensor_no_time().to(self.device)
         M = GetData(self.trade_frequency).make_global_temporal_tensor().to(self.device)
