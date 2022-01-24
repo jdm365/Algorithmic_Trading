@@ -170,7 +170,7 @@ class DilatedGraphConvolutionCell(nn.Module):
             x = T.mm(T.mm(L1, X_t), T.squeeze(self.W_forward[k, :, :])) \
                 + T.mm(T.mm(L2, X_t), T.squeeze(self.W_backward[k, :, :])) \
                 + self.b
-            Z += F.relu(x)
+            Z += T.tanh(x)
         return Z
 
     def conv_layer(self, input, time_features, dilation_factor):
@@ -198,11 +198,8 @@ class DilatedGraphConvolutionCell(nn.Module):
         output = []
         Z = self.X
         for dilation_factor in self.dilation_list:
-            time1 = time.time()
             Z = self.conv_layer(input=Z, time_features=time_features, dilation_factor=dilation_factor)
             output.append(Z[:, :, -1])
-            time2 = time.time()
-            #print(time2 - time1)
         return output
 
 
@@ -247,7 +244,6 @@ class AttentionOutputModule(nn.Module):
         )
 
         self.v = nn.Parameter(T.randn(n_features, 1))
-        self.last_action_weights = nn.Parameter(T.randn(n_nodes, 1)/1000)
         self.lin = nn.Sequential(
             nn.Linear(self.n_features, self.n_features),
             nn.LayerNorm(self.n_features),
@@ -255,15 +251,15 @@ class AttentionOutputModule(nn.Module):
             nn.Linear(self.n_features, 1, bias=False)
         )
 
-        self.FC = nn.Sequential(
-            nn.Linear(n_nodes * n_features, 512),
-            nn.ReLU(),
-            nn.LayerNorm(512),
-            nn.Linear(512, 256),
-            nn.ReLU(),
-            nn.LayerNorm(256),
-            nn.Linear(256, n_nodes),
+        self.conv_map_1 = nn.Sequential(
+            nn.Conv2d(in_channels=64, out_channels=20, kernel_size=1),
             nn.ReLU()
+        )
+        self.conv_map_2 = nn.Sequential(
+            nn.Conv2d(in_channels=21, out_channels=6, kernel_size=1),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=6, out_channels=1, kernel_size=1),
+            nn.Softmax(dim=2)
         )
         self.optimizer = T.optim.Adam(self.parameters(), lr=1e-3)
 
@@ -308,11 +304,14 @@ class AttentionOutputModule(nn.Module):
         # last_action: Tensor (n_nodes) - last action (previous portfolio weights)
         
         # output: Tensor (n_nodes) - action (new portfloio weights)
-        Y = T.flatten(self.compute_att_weighted_conv_output(observation, time_features))
-        action = self.FC(Y).reshape(*last_action.shape, 1)
-        last_weights = T.mul(self.last_action_weights, last_action.reshape(*last_action.shape, 1))
-        print(action, last_weights)
-        return T.squeeze(F.softmax(action + last_weights, dim=0))
+        Y = self.compute_att_weighted_conv_output(observation, time_features).permute(1, 0).contiguous()
+        Y = Y.reshape(1, *Y.shape, 1)
+        last_action = last_action.reshape(1, 1, *last_action.shape, 1)
+
+        action = T.cat((self.conv_map_1(Y), last_action), dim=1)
+        action = self.conv_map_2(action)
+
+        return T.squeeze(action)
 
 
 class Agent(nn.Module):

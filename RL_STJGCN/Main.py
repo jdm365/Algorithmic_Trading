@@ -177,6 +177,6 @@ class Trainer():
 
 if __name__ == '__main__':
     DataFrequency = ['Minute', 'Hourly']
-    Train = Trainer(DataFrequency[1], cuda=False)
+    Train = Trainer(DataFrequency[1], cuda=False, minibatch_size=8)
     Train.train(n_epochs=500)
     #Train.test(run_length=1500)
