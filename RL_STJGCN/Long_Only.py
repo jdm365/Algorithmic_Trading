@@ -28,15 +28,15 @@ class GraphConstructor(nn.Module):
         fc1_dims = 256
         self.spatial = nn.Sequential(
             nn.Linear(n_nodes, fc1_dims),
+            nn.LayerNorm(fc1_dims),
             nn.ReLU(),
-            nn.Linear(fc1_dims, n_nodes * n_features),
-            nn.ReLU()
+            nn.Linear(fc1_dims, n_nodes * n_features)
         )
         self.temporal = nn.Sequential(
             nn.Linear(n_time_features, fc1_dims),
+            nn.LayerNorm(fc1_dims),
             nn.ReLU(),
-            nn.Linear(fc1_dims, n_nodes * n_features),
-            nn.ReLU()
+            nn.Linear(fc1_dims, n_nodes * n_features)
         )
         
         self.B = nn.Parameter(T.ones(n_features, n_features))
@@ -116,13 +116,12 @@ class DilatedGraphConvolutionCell(nn.Module):
 
         self.FC = nn.Sequential(
             nn.Linear(n_nodes * n_data_features, fc1_dims),
-            nn.ReLU(),
             nn.LayerNorm(fc1_dims),
-            nn.Linear(fc1_dims, fc2_dims),
             nn.ReLU(),
+            nn.Linear(fc1_dims, fc2_dims),
             nn.LayerNorm(fc2_dims),
-            nn.Linear(fc2_dims, n_nodes * n_features),
-            nn.ReLU()
+            nn.ReLU(),
+            nn.Linear(fc2_dims, n_nodes * n_features)
         )
 
         self.W_forward = nn.Parameter(T.randn((self.kernel_size, n_features, n_features)))
@@ -248,7 +247,8 @@ class AttentionOutputModule(nn.Module):
             nn.Linear(self.n_features, self.n_features),
             nn.LayerNorm(self.n_features),
             nn.Tanh(),
-            nn.Linear(self.n_features, 1, bias=False)
+            nn.Linear(self.n_features, 1, bias=False),
+            nn.LayerNorm(1)
         )
 
         self.conv_map_1 = nn.Sequential(
