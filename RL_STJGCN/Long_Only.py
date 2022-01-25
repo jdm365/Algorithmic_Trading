@@ -313,7 +313,6 @@ class AttentionOutputModule(nn.Module):
 
         action = T.cat((self.conv_map_1(Y), last_action), dim=1)
         action = self.conv_map_2(action)
-        print(T.squeeze(action))
 
         return T.squeeze(action)
 
