@@ -1,13 +1,8 @@
 import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn import init
-import numpy as np
-import pandas as pd
-import os
-from datetime import datetime, time
 from scipy.linalg import sqrtm
-from pathlib import Path
+import time
 
 class GraphConstructor(nn.Module):
     def __init__(self, n_nodes, n_features, lookback_window, n_time_features, delta_min=0.05):
@@ -19,7 +14,7 @@ class GraphConstructor(nn.Module):
         # delta_min: float - minimum weight to consider in adjacency matrices
 
         self.n_nodes = n_nodes
-        self.layer_initial = init.xavier_normal_(T.ones(lookback_window, n_nodes))
+        self.layer_initial = T.randn(lookback_window, n_nodes)
         self.lookback_window = lookback_window
         self.n_features = n_features
         self.time_features = n_time_features
@@ -28,15 +23,15 @@ class GraphConstructor(nn.Module):
         fc1_dims = 256
         self.spatial = nn.Sequential(
             nn.Linear(n_nodes, fc1_dims),
+            nn.LayerNorm(fc1_dims),
             nn.ReLU(),
-            nn.Linear(fc1_dims, n_nodes * n_features),
-            nn.ReLU()
+            nn.Linear(fc1_dims, n_nodes * n_features)
         )
         self.temporal = nn.Sequential(
             nn.Linear(n_time_features, fc1_dims),
+            nn.LayerNorm(fc1_dims),
             nn.ReLU(),
-            nn.Linear(fc1_dims, n_nodes * n_features),
-            nn.ReLU()
+            nn.Linear(fc1_dims, n_nodes * n_features)
         )
         
         self.B = nn.Parameter(T.ones(n_features, n_features))
@@ -52,7 +47,8 @@ class GraphConstructor(nn.Module):
 
         # output: Tensor (n_nodes, n_features, lookback_window) - spatio-temporal embedding for each 
         #                                                         node at each time step.
-        embedding = T.add(self.spatial(self.layer_initial.to(self.device)), self.temporal(time_features))
+        layer_initial = T.randn(self.lookback_window, self.n_nodes, device=self.device)
+        embedding = T.add(self.spatial(layer_initial), self.temporal(time_features))
         embedding = embedding.reshape(self.lookback_window, self.n_nodes, self.n_features)
         return embedding.permute(1, 0, 2).contiguous()
 
@@ -71,10 +67,11 @@ class GraphConstructor(nn.Module):
         else:
             U1 = T.squeeze(U[:, :, idx])
             U2 = T.squeeze(U[:, :, idx + time_diff])
-        x = T.mm(T.mm(U1, self.B), T.transpose(U2, 0, 1))
+        x = T.mm(T.mm(U1, self.B), T.transpose(U2, 0, 1)).detach().cpu()
         x = T.tensor([i if i >= self.delta_min else 0 \
             for i in T.flatten(x)]).reshape(x.shape)
-        return x.float().softmax(dim=-1)
+        adj = x.float().softmax(dim=-1).to(self.device)
+        return adj
 
 
 class DilatedGraphConvolutionCell(nn.Module):
@@ -114,11 +111,12 @@ class DilatedGraphConvolutionCell(nn.Module):
 
         self.FC = nn.Sequential(
             nn.Linear(n_nodes * n_data_features, fc1_dims),
+            nn.LayerNorm(fc1_dims),
             nn.ReLU(),
             nn.Linear(fc1_dims, fc2_dims),
+            nn.LayerNorm(fc2_dims),
             nn.ReLU(),
-            nn.Linear(fc2_dims, n_nodes * n_features),
-            nn.ReLU()
+            nn.Linear(fc2_dims, n_nodes * n_features)
         )
 
         self.W_forward = nn.Parameter(T.randn((self.kernel_size, n_features, n_features)))
@@ -132,22 +130,22 @@ class DilatedGraphConvolutionCell(nn.Module):
 
     def normalize_adjacency_matrix(self, time_features, idx, time_diff):
         ###
-        # time_features: Tensor (n_nodes, 15+5+4+12, lookback_window)
+        # time_features: Tensor (n_nodes, n_time_features, lookback_window)
         # idx: int - current time step
         # time_diff: int - difference between timesteps for ST graph construction
 
         # output: Tensor (n_nodes, n_nodes) - normalized adjacency matrix
         adjacency_matrix = self.graph.create_adjacency_matrix(time_features, idx, time_diff)
-        degree_matrix = T.eye(adjacency_matrix.shape[0]) * adjacency_matrix.sum(-1)
-        D = T.inverse(T.tensor(sqrtm(degree_matrix), dtype=T.float))
-        return T.mm(T.mm(D, adjacency_matrix), D).to(self.device)
+        degree_matrix = T.eye(adjacency_matrix.shape[0]) * adjacency_matrix.clone().cpu().sum(-1)
+        D = T.inverse(T.tensor(sqrtm(degree_matrix.cpu()), dtype=T.float, device=self.device))
+        return T.mm(T.mm(D, adjacency_matrix), D)
 
     def fully_connected(self, observation):
-        observation = observation.detach()
+        observation = observation.clone()
         obs = T.flatten(observation.permute(2, 0, 1).contiguous(), start_dim=1).to(self.device)
         X = self.FC(obs).reshape(self.lookback_window, self.n_nodes, self.n_features)
         X = X.permute(1, 2, 0).contiguous()
-        self.X = X
+        self.X = X 
 
     def conv(self, input, time_features, idx, gamma):
         ###
@@ -166,8 +164,8 @@ class DilatedGraphConvolutionCell(nn.Module):
             x = T.mm(T.mm(L1, X_t), T.squeeze(self.W_forward[k, :, :])) \
                 + T.mm(T.mm(L2, X_t), T.squeeze(self.W_backward[k, :, :])) \
                 + self.b
-            Z += F.relu(x)
-            return Z.reshape(*Z.shape, 1)
+            Z += T.tanh(x)
+        return Z
 
     def conv_layer(self, input, time_features, dilation_factor):
         ###
@@ -176,12 +174,10 @@ class DilatedGraphConvolutionCell(nn.Module):
         # dilation_factor: int - dilation for conv layer
 
         # output: Tensor (n_nodes, n_data_features, lookback_window) - output of convolution operation
+        Z = T.zeros((self.n_nodes, self.n_features, input.shape[-1] // dilation_factor), device=self.device)
         for t in range(input.shape[-1]):
             if (t + 1) % dilation_factor == 0:
-                try:
-                    Z = T.cat((Z, self.conv(input, time_features, self.gamma * t, self.gamma)), dim=-1)
-                except UnboundLocalError:
-                    Z = self.conv(input, time_features, self.gamma * t, self.gamma)
+                Z[:, :, t // dilation_factor] = self.conv(input, time_features, self.gamma * t, self.gamma)
         self.gamma *= dilation_factor
         return Z
 
@@ -195,7 +191,7 @@ class DilatedGraphConvolutionCell(nn.Module):
         self.gamma = 1
         output = []
         Z = self.X
-        for layer, dilation_factor in enumerate(self.dilation_list):
+        for dilation_factor in self.dilation_list:
             Z = self.conv_layer(input=Z, time_features=time_features, dilation_factor=dilation_factor)
             output.append(Z[:, :, -1])
         return output
@@ -243,21 +239,25 @@ class AttentionOutputModule(nn.Module):
         )
 
         self.v = nn.Parameter(T.randn(n_features, 1))
-        self.last_action_weights = nn.Parameter(T.randn(n_nodes, 1))
         self.lin = nn.Sequential(
             nn.Linear(self.n_features, self.n_features),
             nn.LayerNorm(self.n_features),
             nn.Tanh(),
-            nn.Linear(self.n_features, 1, bias=False)
+            nn.Linear(self.n_features, 1, bias=False),
+            nn.LayerNorm(1)
         )
 
-        self.FC = nn.Sequential(
-            nn.Linear(n_nodes * n_features, 512),
+        self.conv_map_1 = nn.Sequential(
+            nn.Conv2d(in_channels=64, out_channels=20, kernel_size=1),
+            nn.GroupNorm(1, num_channels=20),
+            nn.ReLU()
+        )
+        self.conv_map_2 = nn.Sequential(
+            nn.Conv2d(in_channels=21, out_channels=6, kernel_size=1),
+            nn.GroupNorm(1, num_channels=6),
             nn.ReLU(),
-            nn.Linear(512, 256),
-            nn.ReLU(),
-            nn.Linear(256, n_nodes),
-            nn.LayerNorm(n_nodes, 1)
+            nn.Conv2d(in_channels=6, out_channels=1, kernel_size=1),
+            nn.GroupNorm(1, num_channels=1)
         )
         self.optimizer = T.optim.Adam(self.parameters(), lr=1e-3)
 
@@ -276,13 +276,13 @@ class AttentionOutputModule(nn.Module):
         for idx, state in enumerate(hidden_states):
             HS[idx, :, :] = state
         for node in range(HS.shape[1]):
-            Z = T.zeros(1, device=self.device).clone()
+            Z = T.zeros(1, device=self.device)
             for layer in range(HS.shape[0]):
-                s = self.lin(HS[layer, node, :].clone())
+                s = self.lin(HS[layer, node, :])
                 Z += T.exp(s)
                 alpha[layer, node] = T.exp(s)
             alpha[:, node] = alpha[:, node].clone() / Z
-        return alpha.reshape(*alpha.shape, 1), HS
+        return alpha.reshape(*alpha.shape, 1).to(self.device), HS
 
     def compute_att_weighted_conv_output(self, observation, time_features):
         ###
@@ -302,11 +302,15 @@ class AttentionOutputModule(nn.Module):
         # last_action: Tensor (n_nodes) - last action (previous portfolio weights)
         
         # output: Tensor (n_nodes) - action (new portfloio weights)
-        Y = T.flatten(self.compute_att_weighted_conv_output(observation, time_features))
-        action = self.FC(Y).reshape(*last_action.shape, 1)
-        last_weights = T.mul(self.last_action_weights, last_action.reshape(*last_action.shape, 1)) / 100
-        margin_factor = self.margin / (T.sum(T.abs(T.tanh(action + last_weights))))
-        return T.squeeze(margin_factor * T.tanh(action + last_weights))
+        Y = self.compute_att_weighted_conv_output(observation, time_features).permute(1, 0).contiguous()
+        Y = Y.reshape(1, *Y.shape, 1)
+        last_action = last_action.reshape(1, 1, *last_action.shape, 1)
+
+        action = T.cat((self.conv_map_1(Y), last_action), dim=1)
+        action = T.squeeze(self.conv_map_2(action))
+        action = (self.margin * action) / T.sum(T.abs(action))
+
+        return action
 
 
 class Agent(nn.Module):
@@ -340,11 +344,8 @@ class Agent(nn.Module):
         delta = 5e-3
         c_factor = 0.0025
         done = False
-        observation = observation.detach()
-        action = action.detach()
-        last_action = last_action.detach()
-        price_change_vector = T.squeeze(observation[:, 2, -1]).to(self.device)
-        w_prime = T.mul(last_action, price_change_vector).to(self.device)
+        price_change_vector = T.squeeze(observation[:, 2, -1])
+        w_prime = T.mul(last_action, price_change_vector)
         mu = c_factor * T.sum(T.abs(w_prime - action))
         while not done:
             mu_ = (1 - c_factor * w_prime[0] - (2*c_factor - c_factor**2) * T.sum(F.relu(w_prime[1:] - mu * action[1:]))) / (1 - c_factor * action[0])
@@ -357,7 +358,9 @@ class Agent(nn.Module):
     def step(self, observation, time_features, last_action):
         observation = observation.to(self.device)
         time_features = time_features.to(self.device)
-        action = self.network.forward(observation, time_features, last_action)
+        action = self.network.forward(observation, time_features, last_action).to('cpu')
+        observation = observation.to('cpu')
+        last_action = last_action.to('cpu')
         price_change_vector = observation[:, 2, -1]
         mu = self.calculate_commisions_factor(observation, action, last_action)
         profits = 0
@@ -368,58 +371,3 @@ class Agent(nn.Module):
                 profits += mu * -value * (2 - price_change_vector[idx])
         reward = T.log(profits / self.margin) / self.minibatch_size
         return action, reward
-
-
-class GetData():
-    def __init__(self, trade_frequency):
-        filename = '/' + trade_frequency + '_Data_v1/'
-        self.filepath = str(Path(__file__).parent) + filename
-        self.years = 4
-        if trade_frequency == 'Hourly':
-            self.years = 6
-
-    def make_DF(self):
-        DFNEW = pd.DataFrame()
-        for filename in os.listdir(self.filepath):
-            DF = pd.read_csv(self.filepath + filename)
-            DF = DF[['Local time', 'High', 'Low', 'Close', 'Volume']]
-            try:
-                DFNEW = DFNEW.merge(DF, left_on='Local time', right_on='Local time')
-            except:
-                DFNEW = DF
-        DFNEW = DFNEW.replace(0, 1)
-        return DFNEW
-
-    def make_global_tensor_no_time(self):
-        df = self.make_DF()
-        arr = np.array(df)[:, 1:] # (time, features)
-        Arr = np.array(arr[1:, :] / arr[:-1, :]).astype(float)
-        X = T.ones((Arr.shape[-1] // 4, 4, Arr.shape[0]))
-        for i in range(arr.shape[-1]):
-            j = i // 4
-            k = i % 4
-            X[j, k, :] = T.tensor(Arr[:, i])
-        return X
-
-    def make_global_temporal_tensor(self):
-        df = self.make_DF()
-        arr = np.array(df)[:, 0]
-        M = T.zeros((arr.shape[0], 36 + self.years))
-        for i in range(1, arr.shape[0]):
-            base = arr[i]
-
-            half_hour = T.tensor(2 * (int(base[11:13]) - 9) + (int(base[14:16]) >= 30))
-            if half_hour == 0:
-                half_hour += 1
-            day = T.tensor(datetime.strptime(base[:10].replace('.', ' '), '%d %m %Y').isoweekday())
-            week = T.tensor(abs(int(base[:2]) - 4) // 7)
-            month = T.tensor(int(base[3:5]))
-            year = T.tensor(int(base[8:10]) - 22)
-
-            half_hour = F.one_hot(half_hour-1, 15)
-            day = F.one_hot(day-1, 5)
-            week = F.one_hot(week, 4)
-            month = F.one_hot(month-1, 12)
-            year = F.one_hot(year, self.years)
-            M[i, :] = T.cat((half_hour, day, week, month, year))
-        return M[1:, :]

@@ -20,6 +20,8 @@ class Trainer():
         if trade_frequency == 'Hourly':
             self.n_time_features = 36 + 6
         self.directory = str(Path(__file__).parent) + '/'
+        self.tau = 0.01
+        self.beta = 0
 
     
     def train(self, n_epochs):
@@ -77,6 +79,9 @@ class Trainer():
                 cntr += 1
                 if cntr % agent.minibatch_size == 0:
                     done = True
+
+            if Reward < self.beta:
+                Reward -= self.tau
             Loss = -Reward.to(self.device)
             Loss.backward()
 
@@ -177,6 +182,6 @@ class Trainer():
 
 if __name__ == '__main__':
     DataFrequency = ['Minute', 'Hourly']
-    Train = Trainer(DataFrequency[1], cuda=False, minibatch_size=8)
-    Train.train(n_epochs=500)
+    Train = Trainer(DataFrequency[1], cuda=False, minibatch_size=15, long_only=False)
+    Train.train(n_epochs=3000)
     #Train.test(run_length=1500)
