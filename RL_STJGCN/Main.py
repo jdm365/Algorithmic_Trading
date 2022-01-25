@@ -1,9 +1,9 @@
 import torch as T
 import shutup
 import numpy as np
-from torch._C import device
 from tqdm import tqdm
-from RL_STJGCN.Long_Only import GetData, Agent
+from Get_Data import GetData
+from RL_STJGCN.Long_Only import Agent
 from RL_STJGCN.Long_Short import Agent as ShortAgent
 from utils import plot_learning, BuyAndHold
 from pathlib import Path
