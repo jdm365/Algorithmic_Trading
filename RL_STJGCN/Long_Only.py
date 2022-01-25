@@ -253,12 +253,15 @@ class AttentionOutputModule(nn.Module):
 
         self.conv_map_1 = nn.Sequential(
             nn.Conv2d(in_channels=64, out_channels=20, kernel_size=1),
+            nn.GroupNorm(1, num_channels=20),
             nn.ReLU()
         )
         self.conv_map_2 = nn.Sequential(
             nn.Conv2d(in_channels=21, out_channels=6, kernel_size=1),
+            nn.GroupNorm(1, num_channels=6),
             nn.ReLU(),
             nn.Conv2d(in_channels=6, out_channels=1, kernel_size=1),
+            nn.GroupNorm(1, num_channels=1),
             nn.Softmax(dim=2)
         )
         self.optimizer = T.optim.Adam(self.parameters(), lr=1e-3)
@@ -310,6 +313,7 @@ class AttentionOutputModule(nn.Module):
 
         action = T.cat((self.conv_map_1(Y), last_action), dim=1)
         action = self.conv_map_2(action)
+        print(T.squeeze(action))
 
         return T.squeeze(action)
 
