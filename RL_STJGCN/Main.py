@@ -9,25 +9,28 @@ from utils import plot_learning, BuyAndHold
 from pathlib import Path
 
 class Trainer():
-    def __init__(self, trade_frequency, minibatch_size=30, long_only=True, cuda=False):
+    def __init__(self, trade_frequency, minibatch_size=30, long_only=True, cuda=False, forex=False):
         self.trade_frequency = trade_frequency
         self.minibatch_size = minibatch_size
         self.long_only = long_only
         self.margin = 1.5
         T.cuda.is_available = lambda: cuda
         self.device = 'cuda:0' if T.cuda.is_available() else 'cpu'
-        self.n_time_features = 36 + 4
-        if trade_frequency == 'Hourly':
-            self.n_time_features = 36 + 6
         self.directory = str(Path(__file__).parent) + '/'
-        self.tau = 0.01
-        self.beta = 0
+        self.forex = forex
 
     
     def train(self, n_epochs):
         shutup.please()
-        X = GetData(self.trade_frequency).make_global_tensor_no_time().to(self.device)
-        M = GetData(self.trade_frequency).make_global_temporal_tensor().to(self.device)
+        data = GetData(self.trade_frequency, self.forex)
+        X = data.make_global_tensor_no_time().to(self.device)
+        if self.forex:
+            M = data.make_global_temporal_tensor_forex().to(self.device)
+        else:
+            M = data.make_global_temporal_tensor().to(self.device)
+
+        n_time_features = M.shape[-1]
+
         if self.long_only:
             agent = Agent(
                 kernel_size=2, 
@@ -39,7 +42,7 @@ class Trainer():
                 n_nodes=X.shape[0], 
                 lookback_window=64,
                 minibatch_size=self.minibatch_size,
-                n_time_features=self.n_time_features
+                n_time_features=n_time_features
             )
         else:
             agent = ShortAgent(
@@ -53,7 +56,7 @@ class Trainer():
                 lookback_window=64,
                 minibatch_size=self.minibatch_size,
                 margin=self.margin,
-                n_time_features=self.n_time_features
+                n_time_features=n_time_features
             )
         bnh_agent = BuyAndHold(X)
         Profit_History = []
@@ -79,9 +82,6 @@ class Trainer():
                 cntr += 1
                 if cntr % agent.minibatch_size == 0:
                     done = True
-
-            if Reward < self.beta:
-                Reward -= self.tau
             Loss = -Reward.to(self.device)
             Loss.backward()
 
@@ -113,8 +113,15 @@ class Trainer():
     
     def test(self, run_length):
         shutup.please()
-        X = GetData(self.trade_frequency).make_global_tensor_no_time().to(self.device)
-        M = GetData(self.trade_frequency).make_global_temporal_tensor().to(self.device)
+        data = GetData(self.trade_frequency, self.forex)
+        X = data.make_global_tensor_no_time().to(self.device)
+        if self.forex:
+            M = data.make_global_temporal_tensor_forex().to(self.device)
+        else:
+            M = data.make_global_temporal_tensor().to(self.device)
+
+        n_time_features = M.shape[-1]
+
         if self.long_only:
             agent = Agent(
                 kernel_size=2, 
@@ -126,7 +133,7 @@ class Trainer():
                 n_nodes=X.shape[0], 
                 lookback_window=64,
                 minibatch_size=self.minibatch_size,
-                n_time_features=self.n_time_features
+                n_time_features=n_time_features
             )
         else:
             agent = ShortAgent(
@@ -140,7 +147,7 @@ class Trainer():
                 lookback_window=64,
                 minibatch_size=self.minibatch_size,
                 margin=self.margin,
-                n_time_features=self.n_time_features
+                n_time_features=n_time_features
             )
         bnh_agent = BuyAndHold(X)
         
@@ -182,6 +189,6 @@ class Trainer():
 
 if __name__ == '__main__':
     DataFrequency = ['Minute', 'Hourly']
-    Train = Trainer(DataFrequency[1], cuda=False, minibatch_size=15, long_only=False)
+    Train = Trainer(DataFrequency[1], cuda=False, minibatch_size=15, long_only=False, forex=True)
     Train.train(n_epochs=3000)
     #Train.test(run_length=1500)

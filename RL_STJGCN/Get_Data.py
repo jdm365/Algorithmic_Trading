@@ -7,8 +7,11 @@ from datetime import datetime, time
 import torch.nn.functional as F
 
 class GetData():
-    def __init__(self, trade_frequency):
+    def __init__(self, trade_frequency, forex=False):
         filename = '/' + trade_frequency + '_Data_v1/'
+        if forex:
+            filename = '/Forex_Small_Set/'
+            #filename = '/Forex_Large_Set/'
         self.filepath = str(Path(__file__).parent) + filename
         self.years = 4
         if trade_frequency == 'Hourly':
@@ -58,4 +61,25 @@ class GetData():
             month = F.one_hot(month-1, 12)
             year = F.one_hot(year, self.years)
             M[i, :] = T.cat((half_hour, day, week, month, year))
+        return M[1:, :]
+
+    def make_global_temporal_tensor_forex(self):
+        df = self.make_DF()
+        arr = np.array(df)[:, 0]
+        M = T.zeros((arr.shape[0], 24 + 7 + 4 + 12 + self.years))
+        for i in range(1, arr.shape[0]):
+            base = arr[i]
+
+            hour = T.tensor(int(base[11:13]))
+            day = T.tensor(datetime.strptime(base[:10].replace('.', ' '), '%d %m %Y').isoweekday())
+            week = T.tensor(abs(int(base[:2]) - 4) // 7)
+            month = T.tensor(int(base[3:5]))
+            year = T.tensor(int(base[8:10]) - 17)
+
+            hour = F.one_hot(hour, 24)
+            day = F.one_hot(day-1, 7)
+            week = F.one_hot(week, 4)
+            month = F.one_hot(month-1, 12)
+            year = F.one_hot(year, self.years)
+            M[i, :] = T.cat((hour, day, week, month, year))
         return M[1:, :]
