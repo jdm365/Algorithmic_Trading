@@ -55,6 +55,7 @@ class Preproccess(nn.Module):
     def __init__(self, input_dims_minutely, input_dims_daily, 
         input_dims_weekly, lr=3e-4, fc1_dims=32, fc2_dims=16, output_dims=16):
         super(Preproccess, self).__init__()
+        self.checkpoint_file = 'preprocess_models.pt'
         
         self.minutely_network = nn.Sequential(
             nn.Linear(input_dims_minutely, fc1_dims),
@@ -107,10 +108,17 @@ class Preproccess(nn.Module):
         day = T.mm(D, self.daily_weight_M)
         week = T.mm(W, self.weekly_weight_M)
         return T.cat((minute, day, week), dim=0)
+    
+    def save_checkpoint(self):
+        T.save(self.state_dict(), self.checkpoint_file)
+
+    def load_checkpoint(self):
+        self.load_state_dict(T.load(self.checkpoint_file))
 
 class ActorNetwork(nn.Module):
     def __init__(self, input_dims, actor_lr, fc1_dims=256, fc2_dims=256):
         super(ActorNetwork, self).__init__()
+        self.checkpoint_file = 'actor_model.pt'
         
         self.actor_network = nn.Sequential(
             nn.Linear(input_dims, fc1_dims),
@@ -140,9 +148,16 @@ class ActorNetwork(nn.Module):
         log_probs = probabilities.log_prob(action)
         return action, log_probs
 
+    def save_checkpoint(self):
+        T.save(self.state_dict(), self.checkpoint_file)
+
+    def load_checkpoint(self):
+        self.load_state_dict(T.load(self.checkpoint_file))
+
 class CriticNetwork(nn.Module):
     def __init__(self, input_dims, critic_lr, fc1_dims=256, fc2_dims=256):
         super(CriticNetwork, self).__init__()
+        self.checkpoint_file = 'critic_model.pt'
 
         self.critic_network = nn.Sequential(
             nn.Linear(input_dims, fc1_dims),
@@ -157,6 +172,12 @@ class CriticNetwork(nn.Module):
 
     def forward(self, state):
         return self.critic_network(T.flatten(state, start_dim=-2))
+
+    def save_checkpoint(self):
+        T.save(self.state_dict(), self.checkpoint_file)
+
+    def load_checkpoint(self):
+        self.load_state_dict(T.load(self.checkpoint_file))
 
 class Agent:
     def __init__(self, input_dims_actorcritic=4*12, input_dims_minutely=48*4, 
@@ -237,4 +258,16 @@ class Agent:
                 self.actor.optimizer.step()
                 self.critic.optimizer.step()
         
-        self.memory.clear_memory()   
+        self.memory.clear_memory()
+
+    def save_models(self):
+        print('...saving models...')
+        self.preprocess.save_checkpoint()
+        self.actor.save_checkpoint()
+        self.critic.save_checkpoint()
+
+    def load_models(self):
+        print('...loading models...')
+        self.preprocess.load_checkpoint()
+        self.actor.load_checkpoint()
+        self.critic.load_checkpoint()
