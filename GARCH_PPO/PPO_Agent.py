@@ -1,6 +1,7 @@
 from cmath import nan
 from math import gamma
 from turtle import shape
+from sqlalchemy import true
 import torch as T
 from torch.cuda import is_available
 import torch.nn as nn
@@ -117,34 +118,26 @@ class ActorNetwork(nn.Module):
             nn.ReLU(),
             nn.Linear(fc1_dims, fc2_dims),
             nn.LayerNorm(fc2_dims),
-            nn.ReLU()
+            nn.ReLU(),
+            nn.Linear(fc2_dims, 1)
         )
-        self.mu = nn.Linear(fc2_dims, 1)
-        self.sigma = nn.Sequential(
-            nn.Linear(fc2_dims, 1),
-            nn.ReLU()
-        )
-        self.eta = 1e-6
+        self.sigma = nn.Parameter(T.ones(1))
         self.optimizer = optim.Adam(self.parameters(), lr=actor_lr)
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
 
     def forward(self, state):
-        out = self.actor_network(T.flatten(state, start_dim=-2))
-        mu = self.mu(out)
-        sigma = self.sigma(out)
-        sigma = T.clamp(sigma, min=self.eta, max=1)
+        mu = self.actor_network(T.flatten(state, start_dim=-2))
+        sigma = self.sigma.expand_as(mu)
         return mu, sigma
 
     def sample_normal(self, state):
         mu, sigma = self.forward(state)
         probabilities = Normal(mu, sigma)
-        action = probabilities.sample()
+        action = T.clamp(probabilities.sample(), 0, 1)
 
         action = T.tanh(action).to(self.device)
         log_probs = probabilities.log_prob(action)
-        log_probs -= T.log(1-action.pow(2))
-
         return action, log_probs
 
 class CriticNetwork(nn.Module):
@@ -221,7 +214,8 @@ class Agent:
 
                 critic_value = T.squeeze(self.critic(states))
                 new_log_probs = self.actor.sample_normal(states)[1]
-                prob_ratios = new_log_probs / old_log_probs
+                prob_ratios = T.exp(new_log_probs - old_log_probs)
+
                 weighted_probs = advantage[batch] * prob_ratios
                 weighted_clipped_probs =T.clamp(prob_ratios, 1 - self.policy_clip, 
                     1 + self.policy_clip) * advantage[batch]
