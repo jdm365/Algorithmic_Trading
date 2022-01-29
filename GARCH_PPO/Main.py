@@ -25,8 +25,8 @@ if __name__ == '__main__':
         time_initial = random.randint(32, data.X_m.shape[0]-3072)
         minutely_data, daily_data, weekly_data = data.create_observation(time_initial)
         done = False
-        cash = 10000
-        equity = 0
+        cash = 8000
+        equity = 2000
         capital = cash + equity
         cntr = 0
         while not done:
