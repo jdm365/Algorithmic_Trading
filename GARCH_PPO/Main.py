@@ -16,7 +16,7 @@ if __name__ == '__main__':
     commission_rate = .0025
     gamma_comm = 1 - commission_rate
 
-    figure_file = 'Profit_History,png'
+    figure_file = 'Profit_History.png'
     profit_history = []
     learn_iters = 0
     steps = 0
@@ -54,7 +54,6 @@ if __name__ == '__main__':
             reward = (capital - initial_capital) / initial_capital
             if cntr >= 1024:
                 done = True
-                
             agent.remember(observation, action, prob, val, reward, done)
             
             if steps % agent.N == 0 and steps > 2048:

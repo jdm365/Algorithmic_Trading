@@ -57,7 +57,7 @@ class Preproccess(nn.Module):
         
         self.minutely_network = nn.Sequential(
             nn.Linear(input_dims_minutely, fc1_dims),
-            nn.Dropout(),
+            nn.Dropout(p=.25),
             nn.ReLU(),
             nn.Linear(fc1_dims, fc2_dims),
             nn.Dropout(p=.2),
@@ -67,7 +67,7 @@ class Preproccess(nn.Module):
 
         self.daily_network = nn.Sequential(
             nn.Linear(input_dims_daily, fc1_dims),
-            nn.Dropout(),
+            nn.Dropout(p=.25),
             nn.ReLU(),
             nn.Linear(fc1_dims, fc2_dims),
             nn.Dropout(p=.2),
@@ -77,7 +77,7 @@ class Preproccess(nn.Module):
 
         self.weekly_network = nn.Sequential(
             nn.Linear(input_dims_weekly, fc1_dims),
-            nn.Dropout(),
+            nn.Dropout(p=.25),
             nn.ReLU(),
             nn.Linear(fc1_dims, fc2_dims),
             nn.Dropout(p=.2),
@@ -169,7 +169,7 @@ class Agent:
     def __init__(self, input_dims_actorcritic=4*12, input_dims_minutely=48*4, 
         input_dims_daily=30*5, input_dims_weekly=30*4, discount=0.99, 
         actor_lr=3e-4, critic_lr=3e-4, gae_lambda=0.95, policy_clip=0.1, 
-        batch_size=512, N=756, n_epochs=4):
+        batch_size=1024, N=2048, n_epochs=4):
         self.discount = discount
         self.policy_clip = policy_clip
         self.n_epochs = n_epochs
