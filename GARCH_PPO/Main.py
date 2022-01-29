@@ -63,6 +63,6 @@ if __name__ == '__main__':
 
         profit_history.append(capital - 10000)
         print('Episode Profits: $', profit_history[-1][0].round(decimals=2), 'Profit History Average: $',\
-            np.mean(profit_history[-100:]).round(decimals=2), 'n_steps: ', learn_iters)
+            np.mean(profit_history[-100:]).round(decimals=2), 'n_steps:', steps)
 
     plot_learning(profit_history, filename=figure_file)
