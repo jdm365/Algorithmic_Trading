@@ -45,9 +45,9 @@ def train(n_episodes=500, commission_rate=.0025):
 
             if action < 0:
                 cash = (initial_equity + delta_c) * -action * gamma_comm + initial_cash
-                equity = (initial_equity + delta_c) * (1 + action * gamma_comm)
+                equity = (initial_equity + delta_c) * (1 + action)
             else:
-                cash = initial_cash * (1 - action * gamma_comm)
+                cash = initial_cash * (1 - action)
                 equity = (initial_equity + delta_c) + initial_cash * action * gamma_comm
             capital = cash + equity
 
