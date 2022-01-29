@@ -134,7 +134,7 @@ class ActorNetwork(nn.Module):
     def sample_normal(self, state):
         mu, sigma = self.forward(state)
         probabilities = Normal(mu, sigma)
-        action = T.clamp(probabilities.sample(), 0, 1)
+        action = probabilities.sample()
 
         action = T.tanh(action).to(self.device)
         log_probs = probabilities.log_prob(action)
