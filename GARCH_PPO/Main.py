@@ -7,6 +7,7 @@ from PPO_Agent import Preproccess
 import numpy as np
 from numpy import NaN, random
 from utils import plot_learning
+import tqdm
 
 if __name__ == '__main__':
     data = GetData()
@@ -20,7 +21,7 @@ if __name__ == '__main__':
     learn_iters = 0
     steps = 0
 
-    for i in range(n_episodes):
+    for i in tqdm(range(n_episodes)):
         time_initial = random.randint(0, data.X_m.shape[0] // 1.05)
         minutely_data, daily_data, weekly_data = data.create_observation(time_initial)
         done = False
