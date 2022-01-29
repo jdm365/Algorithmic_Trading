@@ -138,6 +138,7 @@ class ActorNetwork(nn.Module):
 
     def sample_normal(self, state):
         mu, sigma = self.forward(state)
+        print(mu, sigma)
         probabilities = Normal(mu, sigma)
         action = probabilities.sample()
 
