@@ -1,3 +1,4 @@
+from cgitb import reset
 from cmath import nan
 from math import gamma
 from random import randint
@@ -24,6 +25,7 @@ def train(n_episodes=500, commission_rate=.0025):
         time_initial = random.randint(32, data.X_m.shape[0]-3072)
         minutely_data, daily_data, weekly_data = data.create_observation(time_initial)
         done = False
+        reset_memory = False
         cash = 8000
         equity = 2000
         capital = cash + equity
@@ -54,8 +56,10 @@ def train(n_episodes=500, commission_rate=.0025):
                 done = True
             agent.remember(observation, action, prob, val, reward, done)
             
+            if i % 6 == 1:
+                reset_memory = True
             if steps % agent.N == 0 and steps > 2048:
-                agent.learn()
+                agent.learn(reset=reset_memory)
                 learn_iters += 1
             
         if learn_iters % 100 == 0:

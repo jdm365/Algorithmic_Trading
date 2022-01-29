@@ -215,7 +215,7 @@ class Agent:
 
         return action, log_probs, value, state
 
-    def learn(self):
+    def learn(self, reset):
         for _ in range(self.n_epochs):
             states_arr, actions_arr, old_log_probs_arr, vals_arr, rewards_arr,\
                 dones_arr, batches = self.memory.generate_batches()
@@ -261,8 +261,8 @@ class Agent:
                 self.preprocess.optimizer.step()
                 self.actor.optimizer.step()
                 self.critic.optimizer.step()
-        
-        self.memory.clear_memory()
+        if reset:
+            self.memory.clear_memory()
 
     def save_models(self):
         print('...saving models...')
