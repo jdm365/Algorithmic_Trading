@@ -10,11 +10,9 @@ from numpy import NaN, random
 from utils import plot_learning
 from tqdm import tqdm
 
-if __name__ == '__main__':
+def train(n_episodes=500, commission_rate=.0025):
     data = GetData()
     agent = Agent()
-    n_episodes = 500
-    commission_rate = .0025
     gamma_comm = 1 - commission_rate
 
     figure_file = 'Profit_History.png'
@@ -33,7 +31,6 @@ if __name__ == '__main__':
         while not done:
             cntr += 1
             steps += 1
-            initial_capital = cash + equity
             initial_cash = cash
             initial_equity = equity
 
@@ -69,3 +66,45 @@ if __name__ == '__main__':
             np.mean(profit_history[-100:]).round(decimals=2), 'n_steps:', steps)
 
     plot_learning(profit_history, filename=figure_file)
+
+def test(steps=4000, commission_rate=0.0025):
+    data = GetData()
+    agent = Agent()
+    gamma_comm = 1 - commission_rate
+
+    time_initial = random.randint(32, data.X_m.shape[0]-(steps+250))
+    minutely_data, daily_data, weekly_data = data.create_observation(time_initial)
+    done = False
+    cash = 8000
+    equity = 2000
+    capital = cash + equity
+    cntr = 0
+    while not done:
+        cntr += 1
+        initial_cash = cash
+        initial_equity = equity
+
+        previous_last_minutely_close = data.X_m[time_initial + cntr - 1, -2]
+        last_minutely_close = data.X_m[time_initial + cntr, -2]
+
+        action = agent.choose_action(minutely_data, daily_data, weekly_data)[0]
+        minutely_data, daily_data, weekly_data = data.create_observation(time_initial + cntr)
+        delta_c = last_minutely_close - previous_last_minutely_close
+
+        if action < 0:
+            cash = (initial_equity + delta_c) * -action * gamma_comm + initial_cash
+            equity = (initial_equity + delta_c) * (1 + action * gamma_comm)
+        else:
+            cash = initial_cash * (1 - action * gamma_comm)
+            equity = (initial_equity + delta_c) + initial_cash * action * gamma_comm
+        capital = cash + equity
+
+        if cntr >= steps:
+            done = True
+    print('Total Profits: $', np.round((capital-10000), decimals=2))
+
+if __name__ == '__main__':
+    train(n_episodes=1000)
+    n_backtests = 5
+    for _ in range(n_backtests):
+        test()
