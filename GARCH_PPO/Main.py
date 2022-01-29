@@ -7,7 +7,7 @@ from PPO_Agent import Preproccess
 import numpy as np
 from numpy import NaN, random
 from utils import plot_learning
-import tqdm
+from tqdm import tqdm
 
 if __name__ == '__main__':
     data = GetData()
