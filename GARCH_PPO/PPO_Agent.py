@@ -34,7 +34,7 @@ class PPOMemory:
                 batches
 
     def store_memory(self, state, action, probs, vals, reward, done):
-        self.states.append(state.detach().numpy())
+        self.states.append(state.cpu().detach().numpy())
         self.actions.append(action)
         self.probs.append(probs)
         self.vals.append(vals)
