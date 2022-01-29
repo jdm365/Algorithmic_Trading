@@ -1,3 +1,4 @@
+from cmath import nan
 from math import gamma
 from turtle import shape
 import torch as T
@@ -24,7 +25,6 @@ class PPOMemory:
         batch_start = np.arange(0, n_states, self.batch_size)
         indices = np.arange(n_states, dtype=np.int64)
         batches = [indices[i: i + self.batch_size] for i in batch_start]
-
         return np.array(self.states),\
                 np.array(self.actions),\
                 np.array(self.probs),\
@@ -34,7 +34,8 @@ class PPOMemory:
                 batches
 
     def store_memory(self, state, action, probs, vals, reward, done):
-        self.states.append(state)
+        self.states.append(state.detach().numpy())
+        self.actions.append(action)
         self.probs.append(probs)
         self.vals.append(vals)
         self.rewards.append(reward)
@@ -98,9 +99,9 @@ class Preproccess(nn.Module):
         self.to(self.device)
 
     def forward(self, minutely_data, daily_data, weekly_data):
-        M = self.minutely_network(T.flatten(minutely_data)).reshape(*self.minutely_weight_M.shape)
-        D = self.daily_network(T.flatten(daily_data)).reshape(*self.daily_weight_M.shape)
-        W = self.weekly_network(T.flatten(weekly_data)).reshape(*self.weekly_weight_M.shape)
+        M = self.minutely_network(T.flatten(minutely_data, start_dim=-2)).reshape(*self.minutely_weight_M.shape)
+        D = self.daily_network(T.flatten(daily_data, start_dim=-2)).reshape(*self.daily_weight_M.shape)
+        W = self.weekly_network(T.flatten(weekly_data, start_dim=-2)).reshape(*self.weekly_weight_M.shape)
         minute = T.mm(M, self.minutely_weight_M)
         day = T.mm(D, self.daily_weight_M)
         week = T.mm(W, self.weekly_weight_M)
@@ -129,7 +130,7 @@ class ActorNetwork(nn.Module):
         self.to(self.device)
 
     def forward(self, state):
-        out = self.actor_network(T.flatten(state))
+        out = self.actor_network(T.flatten(state, start_dim=-2))
         mu = self.mu(out)
         sigma = self.sigma(out)
         sigma = T.clamp(sigma, min=self.eta, max=1)
@@ -162,13 +163,13 @@ class CriticNetwork(nn.Module):
         self.to(self.device)
 
     def forward(self, state):
-        return self.critic_network(T.flatten(state))
+        return self.critic_network(T.flatten(state, start_dim=-2))
 
 class Agent:
     def __init__(self, input_dims_actorcritic=4*12, input_dims_minutely=48*4, 
         input_dims_daily=30*5, input_dims_weekly=30*4, discount=0.99, 
         actor_lr=3e-4, critic_lr=3e-4, gae_lambda=0.95, policy_clip=0.1, 
-        batch_size=512, N=2048, n_epochs=4):
+        batch_size=512, N=756, n_epochs=4):
         self.discount = discount
         self.policy_clip = policy_clip
         self.n_epochs = n_epochs
@@ -215,11 +216,10 @@ class Agent:
 
             values = T.tensor(vals_arr).to(self.actor.device)
             for batch in batches:
-                states = T.tensor(states_arr[batch], dtype=T.float).to(self.actor.device)
+                states = T.nan_to_num(T.tensor(states_arr[batch], dtype=T.float), nan=2e-1).to(self.actor.device)
                 old_log_probs = T.tensor(old_log_probs_arr[batch]).to(self.actor.device)
 
                 critic_value = T.squeeze(self.critic(states))
-
                 new_log_probs = self.actor.sample_normal(states)[1]
                 prob_ratios = new_log_probs.exp() / old_log_probs.exp()
                 weighted_probs = advantage[batch] * prob_ratios

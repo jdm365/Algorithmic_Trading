@@ -10,11 +10,11 @@ from arch.__future__ import reindexing
 class GetData():
     def __init__(self):
         filename_minutely = \
-            'GARCH_PPO/Bitcoin_GARCH_PPO/BTCUSD_Candlestick_5_M_ASK_31.12.2018-31.12.2021.csv'
+            'GARCH_PPO/AAPL_GARCH_PPO_v1/AAPL.USUSD_Candlestick_5_M_ASK_31.12.2018-31.12.2021.csv'
         filename_daily = \
-            'GARCH_PPO/Bitcoin_GARCH_PPO/BTCUSD_Candlestick_1_D_ASK_31.12.2018-31.12.2021.csv'
+            'GARCH_PPO/AAPL_GARCH_PPO_v1/AAPL.USUSD_Candlestick_1_D_ASK_01.04.2018-31.12.2021.csv'
         filename_weekly = \
-            'GARCH_PPO/Bitcoin_GARCH_PPO/BTCUSD_Candlestick_1_W_ASK_31.12.2018-31.12.2021.csv'
+            'GARCH_PPO/AAPL_GARCH_PPO_v1/AAPL.USUSD_Candlestick_1_W_ASK_01.04.2018-31.12.2021.csv'
         self.minutely_DF = pd.read_csv(filename_minutely)
         self.daily_DF = pd.read_csv(filename_daily)
         self.weekly_DF = pd.read_csv(filename_weekly)
@@ -66,7 +66,13 @@ class GetData():
         for i in range(X_w.shape[0]):
              X_w[i, 0] = X_w[i, 0][:10]
         date = X_m[time_step, 0][:10]
-        current_daily_idx = int(np.where(X_d == date)[0])
+
+        datetime_date = datetime.datetime(int(date[-4:]), int(date[3:5]), int(date[0:2]))
+        daily_dates = [str((datetime_date - timedelta(i)))[:10] for i in range(-4, 0)]
+        daily_dates = [x[8:10] + '.' + x[5:7] + '.' + x[:4] for x in daily_dates]
+        for daily_date in daily_dates:
+            if len(np.where(X_d == daily_date)[0]) > 0:
+                current_daily_idx = int(np.where(X_d == daily_date)[0][0])
 
         datetime_date = datetime.datetime(int(date[-4:]), int(date[3:5]), int(date[0:2]))
         weekly_dates = [str((datetime_date - timedelta(i)))[:10] for i in range(-4, 4)]

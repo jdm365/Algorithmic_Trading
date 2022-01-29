@@ -18,9 +18,10 @@ if __name__ == '__main__':
     figure_file = 'Profit_History,png'
     profit_history = []
     learn_iters = 0
+    steps = 0
 
     for i in range(n_episodes):
-        time_initial = random.randint(101000, data.X_m.shape[0])
+        time_initial = random.randint(0, data.X_m.shape[0] // 1.05)
         minutely_data, daily_data, weekly_data = data.create_observation(time_initial)
         done = False
         cash = 10000
@@ -29,6 +30,7 @@ if __name__ == '__main__':
         cntr = 0
         while not done:
             cntr += 1
+            steps += 1
             initial_capital = cash + equity
             initial_cash = cash
             initial_equity = equity
@@ -51,12 +53,14 @@ if __name__ == '__main__':
             reward = (capital - initial_capital) / initial_capital
             agent.remember(observation, action, prob, val, reward, done)
             
-            if cntr % agent.N == 0:
+            if steps % agent.N == 0:
                 agent.learn()
                 learn_iters += 1
             
             if cntr >= 1024:
                 done = True
-        profit_history.append(capital - 10000)
+
+        profit_history.append(np.floor(capital) - 10000)
         print('Profit History Average: ', np.mean(profit_history[-100:]), 'n_steps: ', learn_iters)
+
     plot_learning(profit_history, filename=figure_file)
