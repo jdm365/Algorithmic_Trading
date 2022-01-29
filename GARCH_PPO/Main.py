@@ -61,8 +61,8 @@ if __name__ == '__main__':
                 agent.learn()
                 learn_iters += 1
             
-            if learn_iters % 100 == 0:
-                agent.save_models()
+        if learn_iters % 100 == 0:
+            agent.save_models()
 
         profit_history.append(capital - 10000)
         print('Episode Profits: $', profit_history[-1][0].round(decimals=2), 'Profit History Average: $',\
