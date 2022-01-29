@@ -131,8 +131,6 @@ class ActorNetwork(nn.Module):
 
     def forward(self, state):
         out = self.actor_network(T.flatten(state, start_dim=-2))
-        if len([*state.shape]) > 2:
-            print(state)
         mu = self.mu(out)
         sigma = self.sigma(out)
         sigma = T.clamp(sigma, min=self.eta, max=1)
@@ -193,10 +191,9 @@ class Agent:
         action, log_probs = self.actor.sample_normal(state)
         value = self.critic(state)
 
-        log_probs = T.squeeze(log_probs).item()
-        action = T.squeeze(action).item()
-        value = T.squeeze(value).item()
-        print(log_probs)
+        log_probs = log_probs.detach().cpu().numpy().flatten()
+        action = action.detach().cpu().numpy().flatten()
+        value = value.detach().cpu().numpy().flatten()
 
         return action, log_probs, value, state
 
@@ -224,7 +221,7 @@ class Agent:
 
                 critic_value = T.squeeze(self.critic(states))
                 new_log_probs = self.actor.sample_normal(states)[1]
-                prob_ratios = new_log_probs.exp() / old_log_probs.exp()
+                prob_ratios = new_log_probs / old_log_probs
                 weighted_probs = advantage[batch] * prob_ratios
                 weighted_clipped_probs =T.clamp(prob_ratios, 1 - self.policy_clip, 
                     1 + self.policy_clip) * advantage[batch]
