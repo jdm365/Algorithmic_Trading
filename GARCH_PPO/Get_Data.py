@@ -6,6 +6,7 @@ from arch import arch_model
 from datetime import timedelta
 import datetime
 from arch.__future__ import reindexing
+from zmq import device
 
 class GetData():
     def __init__(self):
@@ -20,6 +21,7 @@ class GetData():
         self.weekly_DF = pd.read_csv(filename_weekly)
 
         self.create_final_arrays()
+        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
 
     def make_arrays(self):
         minutely_arr = np.array(self.minutely_DF)
@@ -85,9 +87,9 @@ class GetData():
         daily_tensor = T.from_numpy(X_d[current_daily_idx-30:current_daily_idx, 1:].astype(np.float32))
         weekly_tensor = T.from_numpy(X_w[current_weekly_idx-30:current_weekly_idx, 1:].astype(np.float32))
 
-        X_m = self.min_max_norm(minutely_tensor)
-        X_d = self.min_max_norm(daily_tensor)
-        X_w = self.min_max_norm(weekly_tensor)
+        X_m = self.min_max_norm(minutely_tensor).to(self.device)
+        X_d = self.min_max_norm(daily_tensor).to(self.device)
+        X_w = self.min_max_norm(weekly_tensor).to(self.device)
 
         return X_m, X_d, X_w
 
