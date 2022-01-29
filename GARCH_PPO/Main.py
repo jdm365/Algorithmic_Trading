@@ -1,6 +1,7 @@
 from cmath import nan
 from math import gamma
 from random import randint
+from unicodedata import decimal
 from Get_Data import GetData
 from PPO_Agent import Agent
 from PPO_Agent import Preproccess
@@ -60,7 +61,7 @@ if __name__ == '__main__':
                 agent.learn()
                 learn_iters += 1
 
-        profit_history.append(np.floor(capital) - 10000)
-        print('Profit History Average: ', np.mean(profit_history[-100:]), 'n_steps: ', learn_iters)
+        profit_history.append(capital - 10000)
+        print('Profit History Average: $', np.mean(profit_history[-100:]).round(decimals=2), 'n_steps: ', learn_iters)
 
     plot_learning(profit_history, filename=figure_file)
