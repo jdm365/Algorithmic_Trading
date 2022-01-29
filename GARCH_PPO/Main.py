@@ -52,7 +52,7 @@ if __name__ == '__main__':
                 equity = (initial_equity + delta_c) + initial_cash * action * gamma_comm
             capital = cash + equity
 
-            reward = (capital - initial_capital) / initial_capital
+            reward = (action * (last_minutely_close - previous_last_minutely_close)) / previous_last_minutely_close
             if cntr >= 1024:
                 done = True
             agent.remember(observation, action, prob, val, reward, done)

@@ -9,6 +9,7 @@ import torch.nn.functional as F
 import numpy as np
 import torch.optim as optim
 from torch.distributions import Normal
+from pathlib import Path
 
 class PPOMemory:
     def __init__(self, batch_size):
@@ -55,7 +56,8 @@ class Preproccess(nn.Module):
     def __init__(self, input_dims_minutely, input_dims_daily, 
         input_dims_weekly, lr=3e-4, fc1_dims=32, fc2_dims=16, output_dims=16):
         super(Preproccess, self).__init__()
-        self.checkpoint_file = 'preprocess_models.pt'
+        self.filepath = str(Path(__file__).parent)
+        self.checkpoint_file =  self.filepath + '/Trained_Models/preproccess_model.pt'
         
         self.minutely_network = nn.Sequential(
             nn.Linear(input_dims_minutely, fc1_dims),
@@ -118,7 +120,8 @@ class Preproccess(nn.Module):
 class ActorNetwork(nn.Module):
     def __init__(self, input_dims, actor_lr, fc1_dims=256, fc2_dims=256):
         super(ActorNetwork, self).__init__()
-        self.checkpoint_file = 'actor_model.pt'
+        self.filepath = str(Path(__file__).parent)
+        self.checkpoint_file =  self.filepath + '/Trained_Models/actor_model.pt'
         
         self.actor_network = nn.Sequential(
             nn.Linear(input_dims, fc1_dims),
@@ -157,7 +160,8 @@ class ActorNetwork(nn.Module):
 class CriticNetwork(nn.Module):
     def __init__(self, input_dims, critic_lr, fc1_dims=256, fc2_dims=256):
         super(CriticNetwork, self).__init__()
-        self.checkpoint_file = 'critic_model.pt'
+        self.filepath = str(Path(__file__).parent)
+        self.checkpoint_file =  self.filepath + '/Trained_Models/critic_model.pt'
 
         self.critic_network = nn.Sequential(
             nn.Linear(input_dims, fc1_dims),

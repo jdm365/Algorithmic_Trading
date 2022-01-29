@@ -7,15 +7,17 @@ from datetime import timedelta
 import datetime
 from arch.__future__ import reindexing
 from zmq import device
+from pathlib import Path
 
 class GetData():
     def __init__(self):
-        filename_minutely = \
-            'GARCH_PPO/AAPL_GARCH_PPO_v1/AAPL.USUSD_Candlestick_5_M_ASK_31.12.2018-31.12.2021.csv'
-        filename_daily = \
-            'GARCH_PPO/AAPL_GARCH_PPO_v1/AAPL.USUSD_Candlestick_1_D_ASK_01.04.2018-31.12.2021.csv'
-        filename_weekly = \
-            'GARCH_PPO/AAPL_GARCH_PPO_v1/AAPL.USUSD_Candlestick_1_W_ASK_01.04.2018-31.12.2021.csv'
+        self.filepath = str(Path(__file__).parent)
+        filename_minutely = self.filepath + \
+            '/AAPL_GARCH_PPO_v1/AAPL.USUSD_Candlestick_5_M_ASK_31.12.2018-31.12.2021.csv'
+        filename_daily =  self.filepath + \
+            '/AAPL_GARCH_PPO_v1/AAPL.USUSD_Candlestick_1_D_ASK_01.04.2018-31.12.2021.csv'
+        filename_weekly =  self.filepath + \
+            '/AAPL_GARCH_PPO_v1/AAPL.USUSD_Candlestick_1_W_ASK_01.04.2018-31.12.2021.csv'
         self.minutely_DF = pd.read_csv(filename_minutely)
         self.daily_DF = pd.read_csv(filename_daily)
         self.weekly_DF = pd.read_csv(filename_weekly)
