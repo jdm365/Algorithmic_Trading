@@ -22,7 +22,7 @@ if __name__ == '__main__':
     steps = 0
 
     for i in tqdm(range(n_episodes)):
-        time_initial = random.randint(0, data.X_m.shape[0] // 1.05)
+        time_initial = random.randint(32, data.X_m.shape[0]-3072)
         minutely_data, daily_data, weekly_data = data.create_observation(time_initial)
         done = False
         cash = 10000
@@ -52,14 +52,14 @@ if __name__ == '__main__':
             capital = cash + equity
 
             reward = (capital - initial_capital) / initial_capital
-            agent.remember(observation, action, prob, val, reward, done)
-            
-            if steps % agent.N == 0:
-                agent.learn()
-                learn_iters += 1
-            
             if cntr >= 1024:
                 done = True
+                
+            agent.remember(observation, action, prob, val, reward, done)
+            
+            if steps % agent.N == 0 and steps > 2048:
+                agent.learn()
+                learn_iters += 1
 
         profit_history.append(np.floor(capital) - 10000)
         print('Profit History Average: ', np.mean(profit_history[-100:]), 'n_steps: ', learn_iters)

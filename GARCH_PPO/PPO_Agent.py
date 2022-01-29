@@ -131,7 +131,8 @@ class ActorNetwork(nn.Module):
 
     def forward(self, state):
         out = self.actor_network(T.flatten(state, start_dim=-2))
-        print(out)
+        if len([*state.shape]) > 2:
+            print(state)
         mu = self.mu(out)
         sigma = self.sigma(out)
         sigma = T.clamp(sigma, min=self.eta, max=1)
@@ -195,6 +196,7 @@ class Agent:
         log_probs = T.squeeze(log_probs).item()
         action = T.squeeze(action).item()
         value = T.squeeze(value).item()
+        print(log_probs)
 
         return action, log_probs, value, state
 
