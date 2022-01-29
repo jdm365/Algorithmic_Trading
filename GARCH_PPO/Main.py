@@ -22,7 +22,7 @@ def train(n_episodes=500, commission_rate=.0025):
     steps = 0
 
     for i in tqdm(range(n_episodes)):
-        time_initial = random.randint(32, data.X_m.shape[0]-3072)
+        time_initial = random.randint(50, data.X_m.shape[0]-3072)
         minutely_data, daily_data, weekly_data = data.create_observation(time_initial)
         done = False
         cash = 8000
@@ -30,17 +30,18 @@ def train(n_episodes=500, commission_rate=.0025):
         capital = cash + equity
         cntr = 0
         while not done:
-            cntr += 1
             steps += 1
             initial_cash = cash
             initial_equity = equity
+            initial_capital = cash + equity
 
-            previous_last_minutely_close = data.X_m[time_initial + cntr - 1, -2]
-            last_minutely_close = data.X_m[time_initial + cntr, -2]
-
+            last_close = data.X_m[time_initial + cntr, -2]
             action, prob, val, observation = agent.choose_action(minutely_data, daily_data, weekly_data)
+            cntr += 1
             minutely_data, daily_data, weekly_data = data.create_observation(time_initial + cntr)
-            delta_c = last_minutely_close - previous_last_minutely_close
+            close = data.X_m[time_initial + cntr, -2]
+
+            delta_c = close - last_close
 
             if action < 0:
                 cash = (initial_equity + delta_c) * -action * gamma_comm + initial_cash
@@ -49,8 +50,9 @@ def train(n_episodes=500, commission_rate=.0025):
                 cash = initial_cash * (1 - action)
                 equity = (initial_equity + delta_c) + initial_cash * action * gamma_comm
             capital = cash + equity
+            gamma_capital = capital / initial_capital
 
-            reward = (action * (last_minutely_close - previous_last_minutely_close)) / previous_last_minutely_close
+            reward = (action * gamma_capital * (close - last_close)) / last_close
             if cntr >= 1024:
                 done = True
             agent.remember(observation, action, prob, val, reward, done)
@@ -64,7 +66,7 @@ def train(n_episodes=500, commission_rate=.0025):
 
         profit_history.append(capital - 10000)
         print('Episode Profits: $', profit_history[-1][0].round(decimals=2), 'Profit History Average: $',\
-            np.mean(profit_history[-100:]).round(decimals=2), 'n_steps:', steps)
+            np.mean(profit_history[-100:]).round(decimals=2), 'n_steps:', steps, 'Learning Steps: ', learn_iters)
 
     plot_learning(profit_history, filename=figure_file)
 
