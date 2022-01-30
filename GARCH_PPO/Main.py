@@ -53,7 +53,6 @@ def train(n_episodes=500, commission_rate=.0025):
                 cash = initial_cash * (1 - action)
                 equity = (initial_equity + delta_c) + initial_cash * action * gamma_comm
             capital = cash + equity
-            print(delta_c, capital)
             delta_capital = (capital - initial_capital) / initial_capital
 
             #reward = ((action * (close - last_close)) / last_close) ##standard reward
@@ -79,7 +78,7 @@ def train(n_episodes=500, commission_rate=.0025):
 def test(steps=4000, commission_rate=0.0025):
     data = GetData()
     agent = Agent()
-    gamma_comm = 1 - commission_rate
+    gamma_comm = 1# - commission_rate
 
     time_initial = random.randint(32, data.X_m.shape[0]-(steps+250))
     minutely_data, daily_data, weekly_data = data.create_observation(time_initial)
@@ -88,8 +87,9 @@ def test(steps=4000, commission_rate=0.0025):
     equity = 2000
     capital = cash + equity
     cntr = 0
+    max_drawdown = 0
+    capital_history = []
     while not done:
-        steps += 1
         initial_cash = cash
         initial_equity = equity
 
@@ -99,8 +99,8 @@ def test(steps=4000, commission_rate=0.0025):
         minutely_data, daily_data, weekly_data = data.create_observation(time_initial + cntr)
         close = data.X_m[time_initial + cntr, -2]
 
-        delta_c = close - last_close
-
+        delta_c = ((close - last_close) / last_close) * initial_equity
+        
         if action < 0:
             cash = (initial_equity + delta_c) * -action * gamma_comm + initial_cash
             equity = (initial_equity + delta_c) * (1 + action)
@@ -109,12 +109,16 @@ def test(steps=4000, commission_rate=0.0025):
             equity = (initial_equity + delta_c) + initial_cash * action * gamma_comm
         capital = cash + equity
 
+        capital_history.append(capital)
+        if capital == min(capital_history):
+            max_drawdown = capital[0] - 10000
+
         if cntr >= steps:
             done = True
-    print('Total Profits: $', np.round((capital-10000)[0], decimals=2))
+    print('Total Profits: $', np.round((capital-10000)[0], decimals=2), 'Max Drawdown $', np.round(max_drawdown, decimals=2))
 
 if __name__ == '__main__':
-    train(n_episodes=1000)
+    #train(n_episodes=1000)
     n_backtests = 5
-    for _ in range(n_backtests):
+    for _ in tqdm(range(n_backtests)):
         test()
