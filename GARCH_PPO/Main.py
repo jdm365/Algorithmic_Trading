@@ -83,22 +83,23 @@ def test(steps=4000, commission_rate=0.0025):
     capital = cash + equity
     cntr = 0
     while not done:
-        cntr += 1
+        steps += 1
         initial_cash = cash
         initial_equity = equity
 
-        previous_last_minutely_close = data.X_m[time_initial + cntr - 1, -2]
-        last_minutely_close = data.X_m[time_initial + cntr, -2]
-
+        last_close = data.X_m[time_initial + cntr, -2]
         action = agent.choose_action(minutely_data, daily_data, weekly_data)[0]
+        cntr += 1
         minutely_data, daily_data, weekly_data = data.create_observation(time_initial + cntr)
-        delta_c = last_minutely_close - previous_last_minutely_close
+        close = data.X_m[time_initial + cntr, -2]
+
+        delta_c = close - last_close
 
         if action < 0:
             cash = (initial_equity + delta_c) * -action * gamma_comm + initial_cash
-            equity = (initial_equity + delta_c) * (1 + action * gamma_comm)
+            equity = (initial_equity + delta_c) * (1 + action)
         else:
-            cash = initial_cash * (1 - action * gamma_comm)
+            cash = initial_cash * (1 - action)
             equity = (initial_equity + delta_c) + initial_cash * action * gamma_comm
         capital = cash + equity
 
