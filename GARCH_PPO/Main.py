@@ -14,7 +14,7 @@ from tqdm import tqdm
 def train(n_episodes=500, commission_rate=.0025):
     data = GetData()
     agent = Agent()
-    gamma_comm = 1# - commission_rate
+    gamma_comm = 1#\ - commission_rate
 
     figure_file = 'Profit_History.png'
     profit_history = []
@@ -42,7 +42,7 @@ def train(n_episodes=500, commission_rate=.0025):
             minutely_data, daily_data, weekly_data = data.create_observation(time_initial + cntr)
             close = data.X_m[time_initial + cntr, -2]
 
-            delta_c = close - last_close
+            delta_c = ((close - last_close) / last_close) * initial_equity
             closes.append(close)
             running_mean = np.mean(closes[-30:])
 
@@ -53,6 +53,7 @@ def train(n_episodes=500, commission_rate=.0025):
                 cash = initial_cash * (1 - action)
                 equity = (initial_equity + delta_c) + initial_cash * action * gamma_comm
             capital = cash + equity
+            print(delta_c, capital)
             delta_capital = (capital - initial_capital) / initial_capital
 
             #reward = ((action * (close - last_close)) / last_close) ##standard reward
