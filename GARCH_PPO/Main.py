@@ -14,7 +14,7 @@ from tqdm import tqdm
 def train(n_episodes=500, commission_rate=.0025):
     data = GetData()
     agent = Agent()
-    gamma_comm = 1 - commission_rate
+    gamma_comm = 1# - commission_rate
 
     figure_file = 'Profit_History.png'
     profit_history = []
