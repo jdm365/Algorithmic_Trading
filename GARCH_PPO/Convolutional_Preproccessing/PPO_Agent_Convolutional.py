@@ -61,6 +61,7 @@ class Preproccess(nn.Module):
             nn.ReLU(),
             nn.Conv2d(in_channels=10, out_channels=20, kernel_size=(12,1)),
             nn.BatchNorm2d(20),
+            nn.Dropout2d(.2),
             nn.ReLU(),
             nn.Conv2d(in_channels=20, out_channels=1, kernel_size=(32,1)),
             nn.BatchNorm2d(1)
@@ -72,6 +73,7 @@ class Preproccess(nn.Module):
             nn.ReLU(),
             nn.Conv2d(in_channels=10, out_channels=22, kernel_size=(5,1)),
             nn.BatchNorm2d(22),
+            nn.Dropout2d(.2),
             nn.ReLU(),
             nn.Conv2d(in_channels=22, out_channels=1, kernel_size=(23,1)),
             nn.BatchNorm2d(1)
@@ -83,6 +85,7 @@ class Preproccess(nn.Module):
             nn.ReLU(),
             nn.Conv2d(in_channels=8, out_channels=16, kernel_size=(5,1)),
             nn.BatchNorm2d(16),
+            nn.Dropout2d(.2),
             nn.ReLU(),
             nn.Conv2d(in_channels=16, out_channels=1, kernel_size=(23,1)),
             nn.BatchNorm2d(1)
