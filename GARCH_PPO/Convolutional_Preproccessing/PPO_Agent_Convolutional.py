@@ -56,10 +56,10 @@ class Preproccess(nn.Module):
         self.filename = 'preproccess.pt'
 
         self.minutely_network = nn.Sequential(
-            nn.Conv2d(in_channels=4, out_channels=10, kernel_size=(4,1)),
+            nn.Conv2d(in_channels=4, out_channels=10, kernel_size=(3,1)),
             nn.BatchNorm2d(10),
             nn.ReLU(),
-            nn.Conv2d(in_channels=10, out_channels=20, kernel_size=(10,1)),
+            nn.Conv2d(in_channels=10, out_channels=20, kernel_size=(12,1)),
             nn.BatchNorm2d(20),
             nn.ReLU(),
             nn.Conv2d(in_channels=20, out_channels=1, kernel_size=(32,1)),
