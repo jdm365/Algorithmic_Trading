@@ -90,14 +90,14 @@ class GetData():
         daily_dates = [x[8:10] + '.' + x[5:7] + '.' + x[:4] for x in daily_dates]
         for daily_date in daily_dates:
             if len(np.where(X_d == daily_date)[0]) > 0:
-                current_daily_idx = int(np.where(X_d == daily_date)[0][0])
+                current_daily_idx = int(np.where(X_d == daily_date)[0][-1])
 
         datetime_date = datetime.datetime(int(date[-4:]), int(date[3:5]), int(date[0:2]))
         weekly_dates = [str((datetime_date - timedelta(i)))[:10] for i in range(-4, 4)]
         weekly_dates = [x[8:10] + '.' + x[5:7] + '.' + x[:4] for x in weekly_dates]
         for weekly_date in weekly_dates:
             if len(np.where(X_w == weekly_date)[0]) > 0:
-                current_weekly_idx = int(np.where(X_w == weekly_date)[0][0])
+                current_weekly_idx = int(np.where(X_w == weekly_date)[0][-1])
         
         minutely_tensor = T.from_numpy(X_m[time_step-48:time_step, 1:].astype(np.float32))
         daily_tensor = T.from_numpy(X_d[current_daily_idx-30:current_daily_idx, 1:].astype(np.float32))
