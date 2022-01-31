@@ -18,9 +18,21 @@ class GetData():
             '/AAPL_GARCH_PPO_v1/AAPL.USUSD_Candlestick_1_D_ASK_01.04.2018-31.12.2021.csv'
         filename_weekly =  self.filepath + \
             '/AAPL_GARCH_PPO_v1/AAPL.USUSD_Candlestick_1_W_ASK_01.04.2018-31.12.2021.csv'
-        self.minutely_DF = pd.read_csv(filename_minutely)
-        self.daily_DF = pd.read_csv(filename_daily)
-        self.weekly_DF = pd.read_csv(filename_weekly)
+        minutely_DF = pd.read_csv(filename_minutely)
+        daily_DF = pd.read_csv(filename_daily)
+        weekly_DF = pd.read_csv(filename_weekly)
+        
+        minutely_idx = minutely_DF.index[minutely_DF['Gmt time'] == '28.08.2020 19:55:00.000'][0]
+        daily_idx = daily_DF.index[daily_DF['Gmt time'] == '27.08.2020 21:00:00.000'][0]
+        weekly_idx = weekly_DF.index[weekly_DF['Gmt time'] == '23.08.2020 21:00:00.000'][0]
+        
+        minutely_DF.iloc[:minutely_idx+1, 1:5] = minutely_DF.iloc[:minutely_idx+1, 1:5] / 4
+        daily_DF.iloc[:daily_idx+1, 1:5] = daily_DF.iloc[:daily_idx+1, 1:5] / 4
+        weekly_DF.iloc[:weekly_idx+1, 1:5] = weekly_DF.iloc[:weekly_idx+1, 1:5] / 4
+
+        self.minutely_DF = minutely_DF
+        self.daily_DF = daily_DF
+        self.weekly_DF = weekly_DF
 
         self.create_final_arrays()
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
