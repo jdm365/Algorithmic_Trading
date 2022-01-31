@@ -1,4 +1,5 @@
 from os import curdir
+from sympy import convolution
 import torch as T
 import numpy as np
 import pandas as pd
@@ -10,8 +11,9 @@ from zmq import device
 from pathlib import Path
 
 class GetData():
-    def __init__(self):
+    def __init__(self, convolutional=False):
         self.filepath = str(Path(__file__).parent)
+        self.convolutional = convolutional
         filename_minutely = self.filepath + \
             '/AAPL_GARCH_PPO_v1/AAPL.USUSD_Candlestick_5_M_ASK_31.12.2018-31.12.2021.csv'
         filename_daily =  self.filepath + \
@@ -104,6 +106,20 @@ class GetData():
         X_m = self.min_max_norm(minutely_tensor).to(self.device)
         X_d = self.min_max_norm(daily_tensor).to(self.device)
         X_w = self.min_max_norm(weekly_tensor).to(self.device)
+
+        if self.convolutional:
+            X_m = X_m.permute(1, 0).contiguous()
+            X_d = X_d.permute(1, 0).contiguous()
+            X_w = X_w.permute(1, 0).contiguous()
+
+            if len(X_m.shape) != 4:
+                X_m = X_m.reshape(1, *X_m.shape, 1)
+                X_d = X_d.reshape(1, *X_d.shape, 1)
+                X_w = X_w.reshape(1, *X_w.shape, 1)
+            else:
+                X_m = X_m.reshape(*X_m.shape, 1)
+                X_d = X_d.reshape(*X_d.shape, 1)
+                X_w = X_w.reshape(*X_w.shape, 1)
 
         return X_m, X_d, X_w
 
