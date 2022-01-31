@@ -77,7 +77,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard'):
 
         BnH_profit_history.append(BnH_profits)
         profit_history.append(capital - 10000)
-        print('Strategy', reward_type, 'Episode Relative Profits: $', (profit_history[-1][0] - BnH_profits).round(decimals=2), 'Relative Profit History Average: $',\
+        print('Strategy:', reward_type, 'Episode Relative Profits: $', (profit_history[-1][0] - BnH_profits).round(decimals=2), 'Relative Profit History Average: $',\
             np.mean(profit_history[-100:]) - np.mean(BnH_profit_history[-100:]).round(decimals=2), 'n_steps:', steps, 'Learning Steps: ', learn_iters)
 
     plot_learning(profit_history, filename=figure_file)
