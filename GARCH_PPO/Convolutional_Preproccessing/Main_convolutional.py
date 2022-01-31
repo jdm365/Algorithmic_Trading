@@ -57,11 +57,11 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard'):
             delta_capital = (capital - initial_capital) / initial_capital
             
             if reward_type == 'standard':
-                reward = ((100 * action * (close - last_close)) / last_close) ## standard reward
+                reward = ((action * (close - last_close)) / last_close) ## standard reward
             elif reward_type == 'momentum':
-                reward = (100 * action * ((close - last_close) ** 3 / (last_close))) ## momentum reward
+                reward = (action * ((close - last_close) ** 3 / (last_close))) ## momentum reward
             elif reward_type == 'mean_reverting':
-                reward = (100 * action * ((running_mean - last_close) / last_close)) + ((100 * action * (close - last_close)) / last_close) ## mean reverting reward
+                reward = (action * ((running_mean - last_close) / last_close)) + ((action * (close - last_close)) / last_close) ## mean reverting reward
 
             agent.remember(observation, action, prob, val, reward, done)
             
