@@ -83,7 +83,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard'):
     plot_learning(profit_history, filename=figure_file)
     agent.save_models(reward_type)
 
-def test(steps=4000, commission_rate=0.0025):
+def test(steps=20000, commission_rate=0.0025):
     data = GetData(convolutional=True, ticker='TSLA')
     agent_MOM = Agent()
     agent_MR = Agent()
@@ -160,5 +160,5 @@ if __name__ == '__main__':
         train(n_episodes=500, reward_type=strategy)
     
     n_backtests = 5
-    for _ in tqdm(range(n_backtests)):
+    for _ in range(n_backtests):
         test()
