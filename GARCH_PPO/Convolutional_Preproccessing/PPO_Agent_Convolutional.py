@@ -6,6 +6,7 @@ import numpy as np
 import torch.optim as optim
 from torch.distributions import Normal
 from pathlib import Path
+from torch.cuda.amp import GradScaler, autocast
 
 class PPOMemory:
     def __init__(self, batch_size):
@@ -187,16 +188,18 @@ class Agent:
         self.actor = ActorNetwork(input_dims_actorcritic, actor_lr)
         self.critic = CriticNetwork(input_dims_actorcritic, critic_lr)
         self.memory = PPOMemory(batch_size)
+        self.scaler = GradScaler()
 
     def remember(self, state, action, probs, vals, reward, done):
         self.memory.store_memory(state, action, probs, vals, reward, done)
 
     def choose_action(self, minutely_data, daily_data, weekly_data):
-        observation = self.preprocess.forward(minutely_data, daily_data, weekly_data)
-        state = observation.to(self.actor.device)
+        with autocast():
+            observation = self.preprocess.forward(minutely_data, daily_data, weekly_data)
+            state = observation.to(self.actor.device)
 
-        action, log_probs = self.actor.sample_normal(state)
-        value = self.critic(state)
+            action, log_probs = self.actor.sample_normal(state)
+            value = self.critic(state)
 
         log_probs = log_probs.detach().cpu().numpy().flatten()
         action = action.detach().cpu().numpy().flatten()
@@ -245,11 +248,17 @@ class Agent:
                 self.actor.optimizer.zero_grad()
                 self.critic.optimizer.zero_grad()
 
-                total_loss.backward()
+                self.scaler.scale(total_loss).backward()
 
-                self.preprocess.optimizer.step()
-                self.actor.optimizer.step()
-                self.critic.optimizer.step()
+                #self.preprocess.optimizer.step()
+                #self.actor.optimizer.step()
+                #self.critic.optimizer.step()
+
+                self.scaler.step(self.preprocess.optimizer)
+                self.scaler.step(self.actor.optimizer)
+                self.scaler.step(self.critic.optimizer)
+
+                self.scaler.update()
 
         self.memory.clear_memory()
 
