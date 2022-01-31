@@ -23,11 +23,11 @@ class GetData():
                 '/AAPL_GARCH_PPO_v1/AAPL.USUSD_Candlestick_1_W_ASK_01.04.2018-31.12.2021.csv'
         elif ticker == 'TSLA':
             filename_minutely = self.filepath + \
-                'TSLA_GARCH_PPO_v1/TSLA.USUSD_Candlestick_5_M_ASK_31.12.2018-31.12.2021.csv'
+                '/TSLA_GARCH_PPO_v1/TSLA.USUSD_Candlestick_5_M_ASK_31.12.2018-31.12.2021.csv'
             filename_daily =  self.filepath + \
                 '/TSLA_GARCH_PPO_v1/TSLA.USUSD_Candlestick_1_D_ASK_31.12.2017-31.12.2021.csv'
             filename_weekly =  self.filepath + \
-                'TSLA_GARCH_PPO_v1/TSLA.USUSD_Candlestick_1_W_ASK_31.12.2017-31.12.2021.csv'
+                '/TSLA_GARCH_PPO_v1/TSLA.USUSD_Candlestick_1_W_ASK_31.12.2017-31.12.2021.csv'
 
         minutely_DF = pd.read_csv(filename_minutely)
         daily_DF = pd.read_csv(filename_daily)
