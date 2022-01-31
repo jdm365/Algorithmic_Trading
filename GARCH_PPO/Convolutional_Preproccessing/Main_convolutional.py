@@ -161,7 +161,7 @@ def test(steps=20000, commission_rate=0.0025):
 
 if __name__ == '__main__':
     for strategy in ['mean_reverting', 'momentum']:
-        train(n_episodes=500, reward_type=strategy)
+        train(n_episodes=100, reward_type=strategy)
     
     n_backtests = 5
     for _ in range(n_backtests):
