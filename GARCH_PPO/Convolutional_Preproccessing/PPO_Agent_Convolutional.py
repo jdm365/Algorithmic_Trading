@@ -67,13 +67,13 @@ class Preproccess(nn.Module):
         )
 
         self.daily_network = nn.Sequential(
-            nn.Conv2d(in_channels=5, out_channels=10, kernel_size=(4,1)),
+            nn.Conv2d(in_channels=5, out_channels=10, kernel_size=(3,1)),
             nn.BatchNorm2d(10),
             nn.ReLU(),
             nn.Conv2d(in_channels=10, out_channels=22, kernel_size=(5,1)),
             nn.BatchNorm2d(22),
             nn.ReLU(),
-            nn.Conv2d(in_channels=22, out_channels=1, kernel_size=(20,1)),
+            nn.Conv2d(in_channels=22, out_channels=1, kernel_size=(23,1)),
             nn.BatchNorm2d(1)
         )
 
@@ -84,7 +84,7 @@ class Preproccess(nn.Module):
             nn.Conv2d(in_channels=8, out_channels=16, kernel_size=(5,1)),
             nn.BatchNorm2d(16),
             nn.ReLU(),
-            nn.Conv2d(in_channels=16, out_channels=1, kernel_size=(20,1)),
+            nn.Conv2d(in_channels=16, out_channels=1, kernel_size=(23,1)),
             nn.BatchNorm2d(1)
         )
 
@@ -173,7 +173,7 @@ class CriticNetwork(nn.Module):
         self.load_state_dict(T.load(self.checkpoint_dir + '/' + reward_type + '_' + self.filename))
 
 class Agent:
-    def __init__(self, input_dims_actorcritic=3*5-1, input_dims_minutely=(4,48), 
+    def __init__(self, input_dims_actorcritic=8, input_dims_minutely=(4,48), 
         input_dims_daily=(5,30), input_dims_weekly=(4,30), discount=0.99, 
         actor_lr=3e-4, critic_lr=3e-4, gae_lambda=0.95, policy_clip=0.1, 
         batch_size=1024, N=2048, n_epochs=4):
