@@ -187,7 +187,6 @@ class Agent:
         self.actor = ActorNetwork(input_dims_actorcritic, actor_lr)
         self.critic = CriticNetwork(input_dims_actorcritic, critic_lr)
         self.memory = PPOMemory(batch_size)
-        self.scaler = GradScaler()
 
     def remember(self, state, action, probs, vals, reward, done):
         self.memory.store_memory(state, action, probs, vals, reward, done)
