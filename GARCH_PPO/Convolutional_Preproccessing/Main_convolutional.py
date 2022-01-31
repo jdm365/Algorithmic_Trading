@@ -12,7 +12,7 @@ from utils import plot_learning
 from tqdm import tqdm
 
 def train(n_episodes=500, commission_rate=.0025, reward_type='standard'):
-    data = GetData(convolutional=True)
+    data = GetData(convolutional=True, ticker='TSLA')
     agent = Agent()
     gamma_comm = 1#\ - commission_rate
 
@@ -84,7 +84,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard'):
     agent.save_models(reward_type)
 
 def test(steps=4000, commission_rate=0.0025):
-    data = GetData(convolutional=True)
+    data = GetData(convolutional=True, ticker='TSLA')
     agent_MOM = Agent()
     agent_MR = Agent()
     agent_MOM.load_models('momentum')
@@ -156,7 +156,7 @@ def test(steps=4000, commission_rate=0.0025):
 
 
 if __name__ == '__main__':
-    for strategy in ['mean_reverting']:
+    for strategy in ['mean_reverting', 'momentum']:
         train(n_episodes=1000, reward_type=strategy)
     
     n_backtests = 5
