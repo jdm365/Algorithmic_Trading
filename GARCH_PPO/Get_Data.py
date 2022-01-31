@@ -28,6 +28,13 @@ class GetData():
                 '/TSLA_GARCH_PPO_v1/TSLA.USUSD_Candlestick_1_D_ASK_31.12.2017-31.12.2021.csv'
             filename_weekly =  self.filepath + \
                 '/TSLA_GARCH_PPO_v1/TSLA.USUSD_Candlestick_1_W_ASK_31.12.2017-31.12.2021.csv'
+        elif ticker == '.INX':
+            filename_minutely = self.filepath + \
+                '/SNP_GARCH_PPO_v1/USA500.IDXUSD_Candlestick_5_M_ASK_31.12.2018-31.12.2021.csv'
+            filename_daily =  self.filepath + \
+                '/SNP_GARCH_PPO_v1/USA500.IDXUSD_Candlestick_1_D_ASK_31.12.2017-31.12.2021.csv'
+            filename_weekly =  self.filepath + \
+                '/SNP_GARCH_PPO_v1/USA500.IDXUSD_Candlestick_1_W_ASK_31.12.2017-31.12.2021.csv'
 
         minutely_DF = pd.read_csv(filename_minutely)
         daily_DF = pd.read_csv(filename_daily)
@@ -41,6 +48,10 @@ class GetData():
             minutely_DF.iloc[:minutely_idx+1, 1:5] = minutely_DF.iloc[:minutely_idx+1, 1:5] / 4
             daily_DF.iloc[:daily_idx+1, 1:5] = daily_DF.iloc[:daily_idx+1, 1:5] / 4
             weekly_DF.iloc[:weekly_idx+1, 1:5] = weekly_DF.iloc[:weekly_idx+1, 1:5] / 4
+
+            minutely_DF.iloc[:minutely_idx+1, 6] = minutely_DF.iloc[:minutely_idx+1, 6] * 4
+            daily_DF.iloc[:daily_idx+1, 6] = daily_DF.iloc[:daily_idx+1, 6] * 4
+            weekly_DF.iloc[:weekly_idx+1, 6] = weekly_DF.iloc[:weekly_idx+1, 6] * 4
         elif ticker == 'TSLA':
             minutely_idx = minutely_DF.index[minutely_DF['Gmt time'] == '28.08.2020 19:55:00.000'][0]
             daily_idx = daily_DF.index[daily_DF['Gmt time'] == '27.08.2020 21:00:00.000'][0]
@@ -49,6 +60,12 @@ class GetData():
             minutely_DF.iloc[:minutely_idx+1, 1:5] = minutely_DF.iloc[:minutely_idx+1, 1:5] / 5
             daily_DF.iloc[:daily_idx+1, 1:5] = daily_DF.iloc[:daily_idx+1, 1:5] / 5
             weekly_DF.iloc[:weekly_idx+1, 1:5] = weekly_DF.iloc[:weekly_idx+1, 1:5] / 5
+
+            minutely_DF.iloc[:minutely_idx+1, 6] = minutely_DF.iloc[:minutely_idx+1, 6] * 5
+            daily_DF.iloc[:daily_idx+1, 6] = daily_DF.iloc[:daily_idx+1, 6] * 5
+            weekly_DF.iloc[:weekly_idx+1, 6] = weekly_DF.iloc[:weekly_idx+1, 6] * 5
+        elif ticker == '.INX':
+            pass
 
         self.minutely_DF = minutely_DF
         self.daily_DF = daily_DF

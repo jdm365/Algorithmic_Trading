@@ -12,7 +12,7 @@ from utils import plot_learning
 from tqdm import tqdm
 
 def train(n_episodes=500, commission_rate=.0025, reward_type='standard'):
-    data = GetData(convolutional=True, ticker='TSLA')
+    data = GetData(convolutional=True, ticker='.INX')
     agent = Agent()
     gamma_comm = 1#\ - commission_rate
 
@@ -61,7 +61,8 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard'):
             elif reward_type == 'momentum':
                 reward = (action * ((close - last_close) ** 3 / (last_close))) ## momentum reward
             elif reward_type == 'mean_reverting':
-                reward = (action * ((running_mean - last_close) / last_close)) + ((action * (close - last_close)) / last_close) ## mean reverting reward
+                reward = (action * ((running_mean - last_close) / last_close)) + \
+                    ((action * (close - last_close)) / last_close) ## mean reverting reward
 
             agent.remember(observation, action, prob, val, reward, done)
             
@@ -76,8 +77,11 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard'):
 
         BnH_profit_history.append(BnH_profits)
         profit_history.append(capital - 10000)
-        print('Strategy:', reward_type, 'Episode Relative Profits: $', (profit_history[-1][0] - BnH_profits).round(decimals=2), 'Relative Profit History Average: $',\
-            np.mean(profit_history[-100:]) - np.mean(BnH_profit_history[-100:]).round(decimals=2), 'n_steps:', steps, 'Learning Steps: ', learn_iters)
+        print('Strategy:', reward_type, 'Episode Profits: $', profit_history[-1][0], 
+            'Episode Relative Profits: $', (profit_history[-1][0] - BnH_profits).round(decimals=2),\
+            'Relative Profit History Average: $', np.mean(profit_history[-100:])\
+            - np.mean(BnH_profit_history[-100:]).round(decimals=2), 'n_steps:',\
+            steps, 'Learning Steps: ', learn_iters)
 
     plot_learning(profit_history, filename=figure_file)
     agent.save_models(reward_type)
