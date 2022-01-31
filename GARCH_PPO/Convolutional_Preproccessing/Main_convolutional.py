@@ -63,13 +63,12 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard'):
             elif reward_type == 'mean_reverting':
                 reward = (100 * action * ((running_mean - last_close) / last_close)) + ((100 * action * (close - last_close)) / last_close) ## mean reverting reward
 
-            if cntr >= 1024:
-                done = True
             agent.remember(observation, action, prob, val, reward, done)
             
             if steps % agent.N == 0 and steps > 2048:
                 agent.learn()
                 learn_iters += 1
+                done = True
             
         if learn_iters % 100 == 0:
             agent.save_models(reward_type)
