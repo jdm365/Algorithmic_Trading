@@ -27,9 +27,6 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
         capital = cash + equity
         cntr = 0
         closes = []
-        hx_M = T.zeros(1, 64).to(agent.preprocess.device) 
-        hx_D = T.zeros(1, 64).to(agent.preprocess.device)
-        hx_W = T.zeros(1, 64).to(agent.preprocess.device)
         while not done:
             steps += 1
             initial_cash = cash
@@ -37,7 +34,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
             initial_capital = cash + equity
 
             last_close = data.X_m[time_initial + cntr - 1, -2]
-            action, prob, val, observation, hx_M, hx_D, hx_W = agent.choose_action(minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W)
+            action, prob, val, observation = agent.choose_action(minutely_data, daily_data, weekly_data)
             cntr += 1
             minutely_data, daily_data, weekly_data = data.create_observation(time_initial + cntr)
             close = data.X_m[time_initial + cntr - 1, -2]

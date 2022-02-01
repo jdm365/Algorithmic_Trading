@@ -70,6 +70,7 @@ class GetData():
         self.minutely_DF = minutely_DF
         self.daily_DF = daily_DF
         self.weekly_DF = weekly_DF
+        self.n_features = 4
 
         self.create_final_arrays()
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
@@ -106,7 +107,7 @@ class GetData():
    
     def min_max_norm(self, tensor):
         X = T.empty_like(tensor)
-        for dim in range(tensor.shape[-1]):
+        for dim in range(self.n_features):
             X[:, dim] = (tensor[:, dim] - T.min(tensor[:, dim])) \
                 / (T.max(tensor[:, dim]) - T.min(tensor[:, dim]))
         return X
@@ -155,7 +156,6 @@ class GetData():
                 X_m = X_m.reshape(*X_m.shape, 1)
                 X_d = X_d.reshape(*X_d.shape, 1)
                 X_w = X_w.reshape(*X_w.shape, 1)
-
         return X_m, X_d, X_w
 
 

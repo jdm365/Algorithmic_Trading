@@ -85,23 +85,27 @@ class Preproccess(nn.Module):
             nn.ReLU()
         )
 
-        self.MGRU = nn.GRUCell(input_size=input_dims_minutely[-1]-2-11, hidden_size=64)
-        self.DGRU = nn.GRUCell(input_size=input_dims_daily[-1]-2-4, hidden_size=64)
-        self.WGRU = nn.GRUCell(input_size=input_dims_weekly[-1]-2-4, hidden_size=64)
+        self.MGRU = nn.GRU(1, 64, 2, batch_first=True)
+        self.DGRU = nn.GRU(1, 64, 2, batch_first=True)
+        self.WGRU = nn.GRU(1, 64, 2, batch_first=True)
 
         self.optimizer = optim.Adam(self.parameters(), lr=lr)
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
 
-    def forward(self, minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W):
-        M = T.flatten(self.minutely_network(minutely_data), start_dim=1) 
-        D = T.flatten(self.daily_network(daily_data), start_dim=1)
-        W = T.flatten(self.weekly_network(weekly_data), start_dim=1)
-
-        hx_M = self.MGRU(M, hx_M)
-        hx_D = self.DGRU(D, hx_D)
-        hx_W = self.WGRU(W, hx_W)
-        return T.cat((hx_M, hx_D, hx_W), dim=-1), hx_M, hx_D, hx_W
+    def forward(self, minutely_data, daily_data, weekly_data):
+        M = T.flatten(self.minutely_network(minutely_data), start_dim=1, end_dim=-2)
+        D = T.flatten(self.daily_network(daily_data), start_dim=1, end_dim=-2)
+        W = T.flatten(self.weekly_network(weekly_data), start_dim=1, end_dim=-2)
+        
+        h0_M = T.zeros(2, M.shape[0], 64).to(self.device)
+        h0_D = T.zeros(2, D.shape[0], 64).to(self.device)
+        h0_W = T.zeros(2, W.shape[0], 64).to(self.device)
+        print(M.shape, h0_M.shape)  
+        M, _ = self.MGRU(M, h0_M)
+        D, _ = self.DGRU(D, h0_D)
+        W, _ = self.WGRU(W, h0_W)
+        return T.cat((M, D, W), dim=-1)
     
     def save_checkpoint(self, reward_type):
         T.save(self.state_dict(), self.checkpoint_dir + '/' + reward_type + '_' + self.filename)
@@ -178,7 +182,7 @@ class CriticNetwork(nn.Module):
         self.load_state_dict(T.load(self.checkpoint_dir + '/' + reward_type + '_' + self.filename))
 
 class Agent:
-    def __init__(self, input_dims_actorcritic=192, input_dims_minutely=(4,48), 
+    def __init__(self, input_dims_actorcritic=35+24+24, input_dims_minutely=(4,48), 
         input_dims_daily=(5,30), input_dims_weekly=(4,30), discount=0.99, 
         actor_lr=3e-4, critic_lr=3e-4, gae_lambda=0.95, policy_clip=0.1, 
         batch_size=512, N=2048, n_epochs=8):
@@ -196,11 +200,11 @@ class Agent:
     def remember(self, state, action, probs, vals, reward, done):
         self.memory.store_memory(state, action, probs, vals, reward, done)
 
-    def choose_action(self, minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W):
+    def choose_action(self, minutely_data, daily_data, weekly_data):
         self.preprocess.eval()
         self.actor.eval()
         self.critic.eval()
-        observation, hx_M, hx_D, hx_W = self.preprocess.forward(minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W)
+        observation = self.preprocess.forward(minutely_data, daily_data, weekly_data)
         state = observation.to(self.actor.device)
 
         action, log_probs = self.actor.sample_normal(state)
@@ -213,7 +217,7 @@ class Agent:
         self.preprocess.train()
         self.actor.train()
         self.critic.train()
-        return action, log_probs, value, state, hx_M, hx_D, hx_W
+        return action, log_probs, value, state
 
     def learn(self):
         for _ in range(self.n_epochs):
