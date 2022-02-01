@@ -12,8 +12,8 @@ from numpy import NaN, random
 from utils import plot_learning
 from tqdm import tqdm
 
-def train(n_episodes=500, commission_rate=.0025, reward_type='standard'):
-    data = GetData(convolutional=True, ticker='.INX')
+def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker='.INX'):
+    data = GetData(convolutional=True, ticker=ticker)
     agent = Agent()
     gamma_comm = 1#\ - commission_rate
 
@@ -87,8 +87,8 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard'):
     plot_learning(profit_history, filename=figure_file)
     agent.save_models(reward_type)
 
-def test(steps=20000, commission_rate=0.0025):
-    data = GetData(convolutional=True, ticker='TSLA')
+def test(steps=20000, commission_rate=0.0025, ticker='.INX'):
+    data = GetData(convolutional=True, ticker=ticker)
     agent_MOM = Agent()
     agent_MR = Agent()
     agent_MOM.load_models('momentum')
@@ -160,9 +160,9 @@ def test(steps=20000, commission_rate=0.0025):
 
 
 if __name__ == '__main__':
-    for strategy in ['mean_reverting', 'momentum']:
-        train(n_episodes=100, reward_type=strategy)
+    #for strategy in ['mean_reverting', 'momentum']:
+    #    train(n_episodes=100, reward_type=strategy)
     
     n_backtests = 5
     for _ in range(n_backtests):
-        test()
+        test(ticker='.INX')
