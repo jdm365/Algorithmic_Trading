@@ -49,14 +49,14 @@ class PPOMemory:
 
 
 class Preproccess(nn.Module):
-    def __init__(self, lr=3e-4):
+    def __init__(self, input_dims_minutely, input_dims_daily, input_dims_weekly, lr=3e-4):
         super(Preproccess, self).__init__()
         self.filepath = str(Path(__file__).parent)
         self.checkpoint_dir =  self.filepath + '/Trained_Models'
         self.filename = 'preproccess.pt'
 
         self.minutely_network = nn.Sequential(
-            nn.Conv2d(in_channels=4, out_channels=10, kernel_size=(3,1)),
+            nn.Conv2d(in_channels=input_dims_minutely.shape[-1], out_channels=10, kernel_size=(3,1)),
             nn.BatchNorm2d(10),
             nn.ReLU(),
             nn.Conv2d(in_channels=10, out_channels=1, kernel_size=(12,1)),
@@ -66,7 +66,7 @@ class Preproccess(nn.Module):
         )
 
         self.daily_network = nn.Sequential(
-            nn.Conv2d(in_channels=5, out_channels=15, kernel_size=(3,1)),
+            nn.Conv2d(in_channels=input_dims_daily.shape[-1], out_channels=15, kernel_size=(3,1)),
             nn.BatchNorm2d(15),
             nn.ReLU(),
             nn.Conv2d(in_channels=15, out_channels=1, kernel_size=(5,1)),
@@ -76,7 +76,7 @@ class Preproccess(nn.Module):
         )
 
         self.weekly_network = nn.Sequential(
-            nn.Conv2d(in_channels=4, out_channels=8, kernel_size=(3,1)),
+            nn.Conv2d(in_channels=input_dims_weekly.shape[-1], out_channels=8, kernel_size=(3,1)),
             nn.BatchNorm2d(8),
             nn.ReLU(),
             nn.Conv2d(in_channels=8, out_channels=1, kernel_size=(5,1)),
@@ -85,9 +85,9 @@ class Preproccess(nn.Module):
             nn.ReLU()
         )
 
-        self.MGRU = nn.GRUCell(input_size=35, hidden_size=64)
-        self.DGRU = nn.GRUCell(input_size=24, hidden_size=64)
-        self.WGRU = nn.GRUCell(input_size=24, hidden_size=64)
+        self.MGRU = nn.GRUCell(input_size=input_dims_minutely.shape[0]-2-11, hidden_size=64)
+        self.DGRU = nn.GRUCell(input_size=input_dims_daily.shape[0]-2-4, hidden_size=64)
+        self.WGRU = nn.GRUCell(input_size=input_dims_weekly.shape[0]-2-4, hidden_size=64)
 
         self.optimizer = optim.Adam(self.parameters(), lr=lr)
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
@@ -188,7 +188,7 @@ class Agent:
         self.gae_lambda = gae_lambda
         self.N = N
 
-        self.preprocess = Preproccess()
+        self.preprocess = Preproccess(input_dims_minutely, input_dims_daily, input_dims_weekly)
         self.actor = ActorNetwork(input_dims_actorcritic, actor_lr)
         self.critic = CriticNetwork(input_dims_actorcritic, critic_lr)
         self.memory = PPOMemory(batch_size)

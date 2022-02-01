@@ -61,6 +61,8 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
             elif reward_type == 'mean_reverting':
                 reward = (action * ((running_mean - last_close) / last_close)) + \
                     ((action * (close - last_close)) / last_close) ## mean reverting reward
+            elif reward_type == 'traditional':
+                reward = (capital - initial_capital)
 
             agent.remember(observation, action, prob, val, reward, done)
             
@@ -157,7 +159,7 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX'):
 
 
 if __name__ == '__main__':
-    for strategy in ['mean_reverting', 'momentum']:
+    for strategy in ['mean_reverting', 'traditional']:
         train(n_episodes=500, reward_type=strategy, ticker='.INX')
     
     n_backtests = 5
