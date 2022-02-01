@@ -37,11 +37,11 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard'):
             initial_equity = equity
             initial_capital = cash + equity
 
-            last_close = data.X_m[time_initial + cntr, -2]
+            last_close = data.X_m[time_initial + cntr - 1, -2]
             action, prob, val, observation = agent.choose_action(minutely_data, daily_data, weekly_data)
             cntr += 1
             minutely_data, daily_data, weekly_data = data.create_observation(time_initial + cntr)
-            close = data.X_m[time_initial + cntr, -2]
+            close = data.X_m[time_initial + cntr - 1, -2]
 
             delta_c = ((close - last_close) / last_close) * initial_equity
             closes.append(close)
@@ -111,12 +111,12 @@ def test(steps=4000, commission_rate=0.0025):
         initial_cash_MR = cash_MR
         initial_equity_MR = equity_MR
 
-        last_close = data.X_m[time_initial + cntr, -2]
+        last_close = data.X_m[time_initial + cntr - 1, -2]
         action_MOM = agent_MOM.choose_action(minutely_data, daily_data, weekly_data)[0]
         action_MR = agent_MR.choose_action(minutely_data, daily_data, weekly_data)[0]
         cntr += 1
         minutely_data, daily_data, weekly_data = data.create_observation(time_initial + cntr)
-        close = data.X_m[time_initial + cntr, -2]
+        close = data.X_m[time_initial + cntr - 1, -2]
         closes.append(close)
 
         delta_c_MOM = ((close - last_close) / last_close) * initial_equity_MOM

@@ -56,7 +56,7 @@ class Preproccess(nn.Module):
         self.filename = 'preproccess.pt'
 
         self.minutely_network = nn.Sequential(
-            nn.Conv2d(in_channels=input_dims_minutely.shape[-1], out_channels=10, kernel_size=(3,1)),
+            nn.Conv2d(in_channels=input_dims_minutely[0], out_channels=10, kernel_size=(3,1)),
             nn.BatchNorm2d(10),
             nn.ReLU(),
             nn.Conv2d(in_channels=10, out_channels=1, kernel_size=(12,1)),
@@ -66,7 +66,7 @@ class Preproccess(nn.Module):
         )
 
         self.daily_network = nn.Sequential(
-            nn.Conv2d(in_channels=input_dims_daily.shape[-1], out_channels=15, kernel_size=(3,1)),
+            nn.Conv2d(in_channels=input_dims_daily[0], out_channels=15, kernel_size=(3,1)),
             nn.BatchNorm2d(15),
             nn.ReLU(),
             nn.Conv2d(in_channels=15, out_channels=1, kernel_size=(5,1)),
@@ -76,7 +76,7 @@ class Preproccess(nn.Module):
         )
 
         self.weekly_network = nn.Sequential(
-            nn.Conv2d(in_channels=input_dims_weekly.shape[-1], out_channels=8, kernel_size=(3,1)),
+            nn.Conv2d(in_channels=input_dims_weekly[0], out_channels=8, kernel_size=(3,1)),
             nn.BatchNorm2d(8),
             nn.ReLU(),
             nn.Conv2d(in_channels=8, out_channels=1, kernel_size=(5,1)),
@@ -85,9 +85,9 @@ class Preproccess(nn.Module):
             nn.ReLU()
         )
 
-        self.MGRU = nn.GRUCell(input_size=input_dims_minutely.shape[0]-2-11, hidden_size=64)
-        self.DGRU = nn.GRUCell(input_size=input_dims_daily.shape[0]-2-4, hidden_size=64)
-        self.WGRU = nn.GRUCell(input_size=input_dims_weekly.shape[0]-2-4, hidden_size=64)
+        self.MGRU = nn.GRUCell(input_size=input_dims_minutely[-1]-2-11, hidden_size=64)
+        self.DGRU = nn.GRUCell(input_size=input_dims_daily[-1]-2-4, hidden_size=64)
+        self.WGRU = nn.GRUCell(input_size=input_dims_weekly[-1]-2-4, hidden_size=64)
 
         self.optimizer = optim.Adam(self.parameters(), lr=lr)
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
@@ -101,7 +101,7 @@ class Preproccess(nn.Module):
         hx_M = self.MGRU(M, hx_M)
         hx_D = self.DGRU(D, hx_D)
         hx_W = self.WGRU(W, hx_W)
-        return T.cat((hx_M, hx_D, hx_W), dim=-1)
+        return T.cat((hx_M, hx_D, hx_W), dim=-1), hx_M, hx_D, hx_W
     
     def save_checkpoint(self, reward_type):
         T.save(self.state_dict(), self.checkpoint_dir + '/' + reward_type + '_' + self.filename)
@@ -181,7 +181,7 @@ class Agent:
     def __init__(self, input_dims_actorcritic=192, input_dims_minutely=(4,48), 
         input_dims_daily=(5,30), input_dims_weekly=(4,30), discount=0.99, 
         actor_lr=3e-4, critic_lr=3e-4, gae_lambda=0.95, policy_clip=0.1, 
-        batch_size=1024, N=2048, n_epochs=8):
+        batch_size=512, N=2048, n_epochs=8):
         self.discount = discount
         self.policy_clip = policy_clip
         self.n_epochs = n_epochs
@@ -200,7 +200,7 @@ class Agent:
         self.preprocess.eval()
         self.actor.eval()
         self.critic.eval()
-        observation = self.preprocess.forward(minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W)
+        observation, hx_M, hx_D, hx_W = self.preprocess.forward(minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W)
         state = observation.to(self.actor.device)
 
         action, log_probs = self.actor.sample_normal(state)

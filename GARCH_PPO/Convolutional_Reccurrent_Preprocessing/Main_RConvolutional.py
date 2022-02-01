@@ -22,25 +22,25 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
         time_initial = random.randint(50, data.X_m.shape[0]-3072)
         minutely_data, daily_data, weekly_data = data.create_observation(time_initial)
         done = False
-        cash = 8000
-        equity = 2000
+        cash = 5000
+        equity = 5000
         capital = cash + equity
         cntr = 0
         closes = []
-        hx_M = T.zeros(1, 64) 
-        hx_D = T.zeros(1, 64)
-        hx_W = T.zeros(1, 64)
+        hx_M = T.zeros(1, 64).to(agent.preprocess.device) 
+        hx_D = T.zeros(1, 64).to(agent.preprocess.device)
+        hx_W = T.zeros(1, 64).to(agent.preprocess.device)
         while not done:
             steps += 1
             initial_cash = cash
             initial_equity = equity
             initial_capital = cash + equity
 
-            last_close = data.X_m[time_initial + cntr, -2]
+            last_close = data.X_m[time_initial + cntr - 1, -2]
             action, prob, val, observation, hx_M, hx_D, hx_W = agent.choose_action(minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W)
             cntr += 1
             minutely_data, daily_data, weekly_data = data.create_observation(time_initial + cntr)
-            close = data.X_m[time_initial + cntr, -2]
+            close = data.X_m[time_initial + cntr - 1, -2]
 
             delta_c = ((close - last_close) / last_close) * initial_equity
             closes.append(close)
@@ -115,12 +115,12 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX'):
         initial_cash_MR = cash_MR
         initial_equity_MR = equity_MR
 
-        last_close = data.X_m[time_initial + cntr, -2]
+        last_close = data.X_m[time_initial + cntr - 1, -2]
         action_MOM = agent_MOM.choose_action(minutely_data, daily_data, weekly_data)[0]
         action_MR = agent_MR.choose_action(minutely_data, daily_data, weekly_data)[0]
         cntr += 1
         minutely_data, daily_data, weekly_data = data.create_observation(time_initial + cntr)
-        close = data.X_m[time_initial + cntr, -2]
+        close = data.X_m[time_initial + cntr - 1, -2]
         closes.append(close)
 
         delta_c_MOM = ((close - last_close) / last_close) * initial_equity_MOM
@@ -160,7 +160,7 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX'):
 
 if __name__ == '__main__':
     for strategy in ['mean_reverting', 'traditional']:
-        train(n_episodes=500, reward_type=strategy, ticker='.INX')
+        train(n_episodes=100, reward_type=strategy, ticker='.INX')
     
     n_backtests = 5
     for _ in range(n_backtests):
