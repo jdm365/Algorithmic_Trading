@@ -195,6 +195,9 @@ class Agent:
         self.memory.store_memory(state, action, probs, vals, reward, done)
 
     def choose_action(self, minutely_data, daily_data, weekly_data):
+        self.preprocess.eval()
+        self.actor.eval()
+        self.critic.eval()
         observation = self.preprocess.forward(minutely_data, daily_data, weekly_data)
         state = observation.to(self.actor.device)
 
@@ -204,7 +207,10 @@ class Agent:
         log_probs = log_probs.detach().cpu().numpy().flatten()
         action = action.detach().cpu().numpy().flatten()
         value = value.detach().cpu().numpy().flatten()
-
+        
+        self.preprocess.train()
+        self.actor.train()
+        self.critic.train()
         return action, log_probs, value, state
 
     def learn(self):
