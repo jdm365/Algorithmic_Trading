@@ -107,7 +107,8 @@ class GetData():
    
     def min_max_norm(self, tensor):
         X = T.empty_like(tensor)
-        X[:, self.n_features] = tensor[:, self.n_features]
+        if tensor.shape[-1] > self.n_features:
+            X[:, self.n_features] = tensor[:, self.n_features]
         for dim in range(self.n_features):
             X[:, dim] = (tensor[:, dim] - T.min(tensor[:, dim])) \
                 / (T.max(tensor[:, dim]) - T.min(tensor[:, dim]))
