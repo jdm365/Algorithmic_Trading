@@ -80,7 +80,7 @@ class GetData():
         self.n_features = 4
 
         self.create_final_arrays()
-        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
+        self.device = 'cpu' #T.device('cuda:0' if T.cuda.is_available() else 'cpu')
 
     def make_arrays(self):
         minutely_arr = np.array(self.minutely_DF)

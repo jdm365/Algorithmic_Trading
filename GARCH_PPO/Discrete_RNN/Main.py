@@ -32,9 +32,9 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
         cntr = 0
         closes = []
         capital_history = []
-        hx_M = T.zeros(2, minutely_data.shape[0], 64).to(agent.preprocess.device)
-        hx_D = T.zeros(2, daily_data.shape[0], 64).to(agent.preprocess.device)
-        hx_W = T.zeros(2, weekly_data.shape[0], 64).to(agent.preprocess.device)
+        hx_M = T.zeros(2, minutely_data.shape[0], 64)#.to(agent.preprocess.device)
+        hx_D = T.zeros(2, daily_data.shape[0], 64)#.to(agent.preprocess.device)
+        hx_W = T.zeros(2, weekly_data.shape[0], 64)#.to(agent.preprocess.device)
         while not done:
             steps += 1
             initial_cash = cash

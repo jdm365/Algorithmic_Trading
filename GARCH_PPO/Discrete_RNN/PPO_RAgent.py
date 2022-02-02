@@ -61,7 +61,7 @@ class Preproccess(nn.Module):
         self.WGRU = nn.GRU(input_size=input_dims_weekly[0], hidden_size=64, num_layers=2, batch_first=True)
 
         self.optimizer = optim.Adam(self.parameters(), lr=lr)
-        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
+        self.device = 'cpu'#T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
 
     def forward(self, minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W):
@@ -164,7 +164,7 @@ class Agent:
         self.critic.eval()
         
         observation, hx_M, hx_D, hx_W = self.preprocess.forward(minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W)
-        state = observation.to(self.actor.device)
+        state = observation#.to(self.actor.device)
 
         dist = self.actor(state)
         value = self.critic(state)
@@ -173,10 +173,12 @@ class Agent:
         probs = T.squeeze(dist.log_prob(action)).item()
         action = T.squeeze(action).item()
         value = T.squeeze(value).item()
+        state = T.squeeze(state).item()
 
         self.preprocess.train()
         self.actor.train()
         self.critic.train()
+        ## Everything here on the cpu, try only doing batch learning on gpu for attempted speedup.
         return action, probs, value, state, hx_M, hx_D, hx_W
 
     def learn(self):
