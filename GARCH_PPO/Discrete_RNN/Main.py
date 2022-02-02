@@ -84,10 +84,10 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
             
         if learn_iters % 25 == 0:
             agent.save_models(reward_type)
-        BnH_profits = ((closes[-1] / closes[2]) * 10000) - 10000
+        BnH_profits = ((closes[-1] / closes[2]) * 100000) - 100000
 
         BnH_profit_history.append(BnH_profits)
-        profit_history.append(capital - 10000)
+        profit_history.append(capital - 100000)
         print('Strategy:', reward_type, 'Episode Profits: $', profit_history[-1][0],\
             'Episode Relative Profits: $', (profit_history[-1][0] - BnH_profits).round(decimals=2),\
             'Relative Profit History Average: $', np.round(np.mean(profit_history[-100:])\
@@ -109,12 +109,12 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
     minutely_data, daily_data, weekly_data = data.create_observation(time_initial)
     done = False
 
-    cash_1 = 8000
-    equity_1 = 2000
+    cash_1 = 80000
+    equity_1 = 20000
     capital_1 = cash_1 + equity_1
 
-    cash_2 = 8000
-    equity_2 = 2000
+    cash_2 = 80000
+    equity_2 = 20000
     capital_2 = cash_2 + equity_2
 
     max_drawdown_1 = 0
@@ -151,7 +151,7 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
 
         capital_history_1.append(capital_1)
         if capital_1 == min(capital_history_1):
-            max_drawdown_1 = capital_1[0] - 10000
+            max_drawdown_1 = capital_1[0] - 100000
 
         delta_c_2 = ((close - last_close) / last_close) * initial_equity_2
 
@@ -165,15 +165,15 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
 
         capital_history_2.append(capital_2)
         if capital_2 == min(capital_history_2):
-            max_drawdown_2 = capital_2[0] - 10000
+            max_drawdown_2 = capital_2[0] - 100000
 
         if cntr >= steps:
             done = True
-    print(f'Total {strategy[0]} Profits: $', np.round((capital_1-10000)[0], decimals=2), \
+    print(f'Total {strategy[0]} Profits: $', np.round((capital_1-100000)[0], decimals=2), \
         'Max Drawdown $', np.round(max_drawdown_1, decimals=2))
-    print(f'Total {strategy[1]} Profits: $', np.round((capital_2-10000)[0], decimals=2), \
+    print(f'Total {strategy[1]} Profits: $', np.round((capital_2-100000)[0], decimals=2), \
         'Max Drawdown $', np.round(max_drawdown_2, decimals=2))
-    print('Total Buy and Hold Profits: $', np.round(10000 * (closes[-1] / closes[0]) \
+    print('Total Buy and Hold Profits: $', np.round(100000 * (closes[-1] / closes[0]) \
         - 10000, decimals=2))
 
 
