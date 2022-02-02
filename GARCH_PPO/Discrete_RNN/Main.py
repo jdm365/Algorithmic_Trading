@@ -89,7 +89,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
             agent.save_models(reward_type)
         BnH_profits = ((closes[-1] / closes[2]) * 100000) - 100000
 
-        sharpe = (capital - BnH_profits) / np.std(capital_history)
+        sharpe = (capital - BnH_profits) / (100000 * np.std(capital_history))
 
         profit_history.append(capital - 100000)
         sharpe_history.append(sharpe)
