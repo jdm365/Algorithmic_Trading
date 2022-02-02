@@ -158,9 +158,9 @@ class GetData():
             X_w = X_w.permute(1, 0).contiguous()
 
             if len(X_m.shape) != 4:
-                X_m = X_m.reshape(1, *X_m.shape, 1)
-                X_d = X_d.reshape(1, *X_d.shape, 1)
-                X_w = X_w.reshape(1, *X_w.shape, 1)
+                X_m = X_m.reshape(1, *X_m.shape)
+                X_d = X_d.reshape(1, *X_d.shape)
+                X_w = X_w.reshape(1, *X_w.shape)
             else:
                 X_m = X_m.reshape(*X_m.shape, 1)
                 X_d = X_d.reshape(*X_d.shape, 1)

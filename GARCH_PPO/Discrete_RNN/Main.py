@@ -1,9 +1,5 @@
-from math import gamma
-
-from zmq import device
 from GARCH_PPO.Get_Data import GetData
 from PPO_RAgent import Agent
-from PPO_RAgent import Preproccess
 import numpy as np
 from numpy import NaN, random
 from utils import plot_learning
@@ -35,18 +31,20 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
         cntr = 0
         closes = []
         capital_history = []
-        hx_M = T.zeros(2, minutely_data.shape[0], 64)#.to(agent.preprocess.device)
-        hx_D = T.zeros(2, daily_data.shape[0], 64)#.to(agent.preprocess.device)
-        hx_W = T.zeros(2, weekly_data.shape[0], 64)#.to(agent.preprocess.device)
+        hx_M = T.zeros(2, 64)#.to(agent.preprocess.device)
+        hx_D = T.zeros(2, 64)#.to(agent.preprocess.device)
+        hx_W = T.zeros(2, 64)#.to(agent.preprocess.device)
         while not done:
-            agent.to('cpu')
+            agent.preprocess.to('cpu')
+            agent.actor.to('cpu')
+            agent.critic.to('cpu')
             steps += 1
             initial_cash = cash
             initial_equity = equity
             initial_capital = cash + equity
 
             last_close = data.X_m[time_initial + cntr - 1, -2]
-            action, prob, val, observation, hx_M, hx_D, hx_W = \
+            action, prob, val, minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W = \
                 agent.choose_action(minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W)
             cntr += 1
             minutely_data, daily_data, weekly_data = data.create_observation(time_initial + cntr)
@@ -83,10 +81,13 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
             elif reward_type == 'traditional':
                 reward = (capital - initial_capital)
             capital_history.append(capital)
-            agent.remember(observation, action, prob, val, reward, done)
+
+            agent.remember(minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W, action, prob, val, reward, done)
             
             if steps % agent.N == 0:
-                agent.to(device)
+                agent.preprocess.to(device)
+                agent.actor.to(device)
+                agent.critic.to(device)
                 agent.learn()
                 learn_iters += 1
                 done = True

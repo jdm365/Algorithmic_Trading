@@ -1,3 +1,4 @@
+from opcode import stack_effect
 from torch.distributions import Categorical
 import torch as T
 from torch.cuda import is_available
@@ -25,7 +26,7 @@ class PPOMemory:
         self.batch_size = batch_size
 
     def generate_batches(self):
-        n_states = len(self.states)
+        n_states = len(self.minutely_states)
         batch_start = np.arange(0, n_states, self.batch_size)
         indices = np.arange(n_states, dtype=np.int64)
         batches = [indices[i: i + self.batch_size] for i in batch_start]
@@ -44,12 +45,12 @@ class PPOMemory:
 
     def store_memory(self, minutely_data, daily_data, weekly_data, hx_M,\
         hx_D, hx_W, action, probs, vals, reward, done):
-        self.minutely_states.append(minutely_data)
-        self.daily_states.append(daily_data)
-        self.weekly_states.append(weekly_data)
-        self.hx_Ms.append(hx_M)
-        self.hx_Ds.append(hx_D)
-        self.hx_Ws.append(hx_W)
+        self.minutely_states.append(minutely_data.detach().numpy())
+        self.daily_states.append(daily_data.detach().numpy())
+        self.weekly_states.append(weekly_data.detach().numpy())
+        self.hx_Ms.append(hx_M.detach().numpy())
+        self.hx_Ds.append(hx_D.detach().numpy())
+        self.hx_Ws.append(hx_W.detach().numpy())
         self.actions.append(action)
         self.probs.append(probs)
         self.vals.append(vals)
@@ -86,10 +87,19 @@ class Preproccess(nn.Module):
         self.to(self.device)
 
     def forward(self, minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W):
-        min = minutely_data.flatten(start_dim=-2).permute(0, 2, 1).contiguous()
-        day = daily_data.flatten(start_dim=-2).permute(0, 2, 1).contiguous()
-        week = weekly_data.flatten(start_dim=-2).permute(0, 2, 1).contiguous()
+        if minutely_data.shape[0] == 1:
+            min = minutely_data.permute(0, 2, 1).contiguous()
+            day = daily_data.permute(0, 2, 1).contiguous()
+            week = weekly_data.permute(0, 2, 1).contiguous()
+        else:
+            min = T.squeeze(minutely_data).permute(0, 2, 1).contiguous()
+            day = T.squeeze(daily_data).permute(0, 2, 1).contiguous()
+            week = T.squeeze(weekly_data).permute(0, 2, 1).contiguous()
 
+        hx_M = hx_M.reshape(2, minutely_data.shape[0], hx_M.shape[-1])
+        hx_D = hx_D.reshape(2, daily_data.shape[0], hx_D.shape[-1])
+        hx_W = hx_W.reshape(2, weekly_data.shape[0], hx_W.shape[-1])
+        print(hx_M.shape)
         M, hx_M = self.MGRU(min, hx_M)
         D, hx_D = self.DGRU(day, hx_D)
         W, hx_W = self.WGRU(week, hx_W)
@@ -195,13 +205,12 @@ class Agent:
         probs = T.squeeze(dist.log_prob(action)).item()
         action = T.squeeze(action).item()
         value = T.squeeze(value).item()
-        state = T.squeeze(state).item()
 
         self.preprocess.train()
         self.actor.train()
         self.critic.train()
         ## Everything here on the cpu, try only doing batch learning on gpu for attempted speedup.
-        return action, probs, value, state, hx_M, hx_D, hx_W
+        return action, probs, value, minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W
 
     def learn(self):
         for _ in range(self.n_epochs):
@@ -230,7 +239,7 @@ class Agent:
                 hx_Ds = T.tensor(hx_D_arr[batch], dtype=T.float).to(self.preprocess.device)
                 hx_Ws = T.tensor(hx_W_arr[batch], dtype=T.float).to(self.preprocess.device)
 
-                states = self.preprocess(minutely_states, daily_states, weekly_states, hx_Ms, hx_Ds, hx_Ws)
+                states = self.preprocess(minutely_states, daily_states, weekly_states, hx_Ms, hx_Ds, hx_Ws)[0]
                 old_probs = T.tensor(old_probs_arr[batch]).to(self.actor.device)
                 actions = T.tensor(actions_arr[batch]).to(self.actor.device)
 
