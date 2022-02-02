@@ -99,7 +99,7 @@ class Preproccess(nn.Module):
         hx_M = hx_M.reshape(2, minutely_data.shape[0], hx_M.shape[-1])
         hx_D = hx_D.reshape(2, daily_data.shape[0], hx_D.shape[-1])
         hx_W = hx_W.reshape(2, weekly_data.shape[0], hx_W.shape[-1])
-        print(hx_M.shape)
+
         M, hx_M = self.MGRU(min, hx_M)
         D, hx_D = self.DGRU(day, hx_D)
         W, hx_W = self.WGRU(week, hx_W)
