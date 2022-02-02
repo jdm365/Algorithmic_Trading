@@ -61,8 +61,9 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
                 reward = ((action * (close - last_close)) / last_close)
             elif reward_type == 'momentum':
                 reward = (action * ((running_mean_medium - running_mean_long) / (running_mean_long))) + \
-                    (action * ((running_mean_short - running_mean_medium) / (running_mean_medium))) + \
-                    (action * ((close - running_mean_short) / (running_mean_short)))
+                    2*(action * ((running_mean_short - running_mean_medium) / (running_mean_medium))) + \
+                    3*(action * ((last_close - running_mean_short) / (running_mean_short))) + \
+                    4*(action * ((close - last_close) / (last_close)))
             elif reward_type == 'mean_reverting':
                 reward = (action * ((running_mean_long - last_close) / last_close)) + \
                     ((action * (close - last_close)) / last_close)
