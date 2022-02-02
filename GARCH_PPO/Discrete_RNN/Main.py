@@ -99,6 +99,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
             'Episode Sharpe Ratio: ', np.round(sharpe, decimals=4),\
             'Sharpe Ratio Average:', np.round(np.mean(sharpe_history[-100:]), decimals=4),\
             'n_steps:', steps, 'Learning Steps: ', learn_iters)
+        os.system('clear')
 
     plot_learning(profit_history, filename=figure_file)
     agent.save_models(reward_type)
