@@ -89,7 +89,8 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
             'Relative Profit History Average: $', np.round(np.mean(profit_history[-100:])\
             - np.mean(BnH_profit_history[-100:]), decimals=2), 'n_steps:',\
             steps, 'Learning Steps: ', learn_iters)
-        os.system('clear')
+        if i % 25 != 0:
+            os.system('clear')
 
     plot_learning(profit_history, filename=figure_file)
     agent.save_models(reward_type)

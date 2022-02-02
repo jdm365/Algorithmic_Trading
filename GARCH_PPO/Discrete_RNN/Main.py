@@ -99,7 +99,8 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
             'Episode Sharpe Ratio: ', np.round(sharpe, decimals=4),\
             'Sharpe Ratio Average:', np.round(np.mean(sharpe_history[-100:]), decimals=4),\
             'n_steps:', steps, 'Learning Steps: ', learn_iters)
-        os.system('clear')
+        if i % 25 != 0:
+            os.system('clear')
 
     plot_learning(profit_history, filename=figure_file)
     agent.save_models(reward_type)
@@ -186,7 +187,6 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
         'Max Drawdown $', np.round(max_drawdown_2, decimals=2))
     print('Total Buy and Hold Profits: $', np.round(100000 * (closes[-1] / closes[0]) \
         - 10000, decimals=2))
-    os.system('clear')
 
 
 if __name__ == '__main__':
