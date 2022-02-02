@@ -6,6 +6,7 @@ from numpy import NaN, random
 from utils import plot_learning
 from tqdm import tqdm
 import torch as T
+import os
 
 def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker='.INX'):
     data = GetData(convolutional=True, ticker=ticker)
@@ -88,6 +89,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
             'Relative Profit History Average: $', np.round(np.mean(profit_history[-100:])\
             - np.mean(BnH_profit_history[-100:]), decimals=2), 'n_steps:',\
             steps, 'Learning Steps: ', learn_iters)
+        os.system('clear')
 
     plot_learning(profit_history, filename=figure_file)
     agent.save_models(reward_type)
@@ -167,7 +169,7 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
     print(f'Total {strategy[0]} Profits: $', np.round((capital_1-10000)[0], decimals=2), 'Max Drawdown $', np.round(max_drawdown_1, decimals=2))
     print(f'Total {strategy[1]} Profits: $', np.round((capital_2-10000)[0], decimals=2), 'Max Drawdown $', np.round(max_drawdown_2, decimals=2))
     print('Total Buy and Hold Profits: $', np.round(10000 * (closes[-1] / closes[0]) - 10000, decimals=2))
-
+    os.system('clear')
 
 if __name__ == '__main__':
     strategies = ['standard', 'momentum', 'mean_reverting']
