@@ -35,6 +35,13 @@ class GetData():
                 '/SNP_GARCH_PPO_v1/USA500.IDXUSD_Candlestick_1_D_ASK_31.12.2017-31.12.2021.csv'
             filename_weekly =  self.filepath + \
                 '/SNP_GARCH_PPO_v1/USA500.IDXUSD_Candlestick_1_W_ASK_31.12.2017-31.12.2021.csv'
+        elif ticker == '.INX2':
+            filename_minutely = self.filepath + \
+                '/SNP_GARCH_PPO_v2/USA500.IDXUSD_Candlestick_1_Hour_ASK_31.12.2014-31.12.2021.csv'
+            filename_daily =  self.filepath + \
+                '/SNP_GARCH_PPO_v2/USA500.IDXUSD_Candlestick_1_D_ASK_31.12.2013-31.12.2021.csv'
+            filename_weekly =  self.filepath + \
+                '/SNP_GARCH_PPO_v2/USA500.IDXUSD_Candlestick_1_W_ASK_31.12.2013-31.12.2021.csv'
 
         minutely_DF = pd.read_csv(filename_minutely)
         daily_DF = pd.read_csv(filename_daily)
@@ -64,7 +71,7 @@ class GetData():
             minutely_DF.iloc[:minutely_idx+1, 5] = minutely_DF.iloc[:minutely_idx+1, 5] * 5
             daily_DF.iloc[:daily_idx+1, 5] = daily_DF.iloc[:daily_idx+1, 5] * 5
             weekly_DF.iloc[:weekly_idx+1, 5] = weekly_DF.iloc[:weekly_idx+1, 5] * 5
-        elif ticker == '.INX':
+        elif ticker == '.INX' or ticker == '.INX2':
             pass
 
         self.minutely_DF = minutely_DF

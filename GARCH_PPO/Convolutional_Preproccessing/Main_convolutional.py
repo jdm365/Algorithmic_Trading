@@ -160,9 +160,9 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX'):
 
 
 if __name__ == '__main__':
-    #for strategy in ['mean_reverting', 'momentum']:
-    #    train(n_episodes=500, reward_type=strategy, ticker='.INX')
+    for strategy in ['mean_reverting', 'momentum']:
+        train(n_episodes=500, reward_type=strategy, ticker='.INX2')
     
     n_backtests = 5
     for _ in range(n_backtests):
-        test(ticker='.INX')
+        test(ticker='.INX2')
