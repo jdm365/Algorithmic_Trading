@@ -171,7 +171,7 @@ class Agent:
         action = dist.sample()
 
         probs = T.squeeze(dist.log_prob(action)).item()
-        action = T.squeeze(action).item() - 1
+        action = T.squeeze(action).item()
         value = T.squeeze(value).item()
 
         self.preprocess.train()
@@ -206,7 +206,7 @@ class Agent:
                 critic_value = self.critic(states)
 
                 critic_value = T.squeeze(self.critic(states))
-                new_probs = dist.log_probs(actions)
+                new_probs = dist.log_prob(actions)
                 prob_ratios = T.exp(new_probs - old_probs)
 
                 weighted_probs = advantage[batch] * prob_ratios

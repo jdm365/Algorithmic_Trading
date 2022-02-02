@@ -53,12 +53,14 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
             running_mean_medium = np.mean(closes[-13:])
             running_mean_short = np.mean(closes[-8:])
 
+            action -= 1
             if action == 1 and initial_cash < close:
                 cash = initial_cash
                 equity = (initial_equity + delta_c)
             else:
                 cash = initial_cash - (action * close * gamma_comm)
                 equity = (initial_equity + delta_c) + (action * close * gamma_comm)
+            action += 1
 
             capital = cash + equity
             
@@ -88,8 +90,8 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
 
         BnH_profit_history.append(BnH_profits)
         profit_history.append(capital - 100000)
-        print('Strategy:', reward_type, 'Episode Profits: $', profit_history[-1][0],\
-            'Episode Relative Profits: $', (profit_history[-1][0] - BnH_profits).round(decimals=2),\
+        print('Strategy:', reward_type, 'Episode Profits: $', profit_history[-1],\
+            'Episode Relative Profits: $', np.round((profit_history[-1] - BnH_profits), decimals=2),\
             'Relative Profit History Average: $', np.round(np.mean(profit_history[-100:])\
             - np.mean(BnH_profit_history[-100:]), decimals=2), 'n_steps:',\
             steps, 'Learning Steps: ', learn_iters)
@@ -141,12 +143,14 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
 
         delta_c_1 = ((close - last_close) / last_close) * initial_equity_1
 
+        action_1 -= 1
         if action_1 == 1 and initial_cash_1 < close:
             cash = initial_cash_1
             equity = (initial_equity_1 + delta_c_1)
         else:
             cash = initial_cash_1 - (action_1 * close * gamma_comm)
             equity = (initial_equity_1 + delta_c_1) + (action_1 * close * gamma_comm)
+        action_1 += 1
         capital_1 = cash_1 + equity_1
 
         capital_history_1.append(capital_1)
@@ -155,12 +159,14 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
 
         delta_c_2 = ((close - last_close) / last_close) * initial_equity_2
 
+        action_2 -= 1
         if action_2 == 1 and initial_cash_2 < close:
             cash = initial_cash_2
             equity = (initial_equity_2 + delta_c_2)
         else:
             cash = initial_cash_2 - (action_2 * close * gamma_comm)
             equity = (initial_equity_2 + delta_c_2) + (action_2 * close * gamma_comm)
+        action_2 += 1
         capital_2 = cash_2 + equity_2
 
         capital_history_2.append(capital_2)
