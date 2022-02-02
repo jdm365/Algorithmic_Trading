@@ -165,9 +165,10 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
 
 
 if __name__ == '__main__':
-    for strategy in ['mean_reverting', 'traditional']:
+    strategies = ['traditional']
+    for strategy in strategies:
         train(n_episodes=100, reward_type=strategy, ticker='.INX')
     
     n_backtests = 5
     for _ in range(n_backtests):
-        test(ticker='.INX')
+        test(ticker='.INX', strategies=strategies)
