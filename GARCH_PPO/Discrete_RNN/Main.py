@@ -1,4 +1,6 @@
 from math import gamma
+
+from zmq import device
 from GARCH_PPO.Get_Data import GetData
 from PPO_RAgent import Agent
 from PPO_RAgent import Preproccess
@@ -23,6 +25,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
     steps = 0
 
     for i in tqdm(range(n_episodes), desc='Progress'):
+        device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         time_initial = random.randint(50, data.X_m.shape[0]-3072)
         minutely_data, daily_data, weekly_data = data.create_observation(time_initial)
         done = False
@@ -36,6 +39,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
         hx_D = T.zeros(2, daily_data.shape[0], 64)#.to(agent.preprocess.device)
         hx_W = T.zeros(2, weekly_data.shape[0], 64)#.to(agent.preprocess.device)
         while not done:
+            agent.to('cpu')
             steps += 1
             initial_cash = cash
             initial_equity = equity
@@ -82,6 +86,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
             agent.remember(observation, action, prob, val, reward, done)
             
             if steps % agent.N == 0:
+                agent.to(device)
                 agent.learn()
                 learn_iters += 1
                 done = True
