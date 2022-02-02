@@ -22,7 +22,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
     learn_iters = 0
     steps = 0
 
-    for i in tqdm(range(n_episodes)):
+    for i in tqdm(range(n_episodes), desc='Progress'):
         time_initial = random.randint(50, data.X_m.shape[0]-3072)
         minutely_data, daily_data, weekly_data = data.create_observation(time_initial)
         done = False
