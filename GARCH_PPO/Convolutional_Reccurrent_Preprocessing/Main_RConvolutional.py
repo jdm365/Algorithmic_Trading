@@ -67,7 +67,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
 
             agent.remember(observation, action, prob, val, reward, done)
             
-            if steps % agent.N == 0 and steps > 2048:
+            if steps % agent.N == 0:
                 agent.learn()
                 learn_iters += 1
                 done = True
@@ -160,7 +160,7 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX'):
 
 
 if __name__ == '__main__':
-    for strategy in ['mean_reverting', 'traditional']:
+    for strategy in ['traditional']:
         train(n_episodes=100, reward_type=strategy, ticker='.INX')
     
     n_backtests = 5
