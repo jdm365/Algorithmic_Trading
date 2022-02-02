@@ -8,6 +8,7 @@ from utils import plot_learning
 from tqdm import tqdm
 import shutup
 import torch as T
+import os
 
 def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker='.INX'):
     shutup.please()
@@ -184,6 +185,7 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
         'Max Drawdown $', np.round(max_drawdown_2, decimals=2))
     print('Total Buy and Hold Profits: $', np.round(100000 * (closes[-1] / closes[0]) \
         - 10000, decimals=2))
+    os.system('clear')
 
 
 if __name__ == '__main__':
