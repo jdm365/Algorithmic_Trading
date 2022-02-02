@@ -20,7 +20,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
     learn_iters = 0
     steps = 0
 
-    for i in tqdm(range(n_episodes), desc='Progress'):
+    for i in tqdm(range(n_episodes), desc=f'{reward_type}'):
         device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         time_initial = random.randint(50, data.X_m.shape[0]-3072)
         minutely_data, daily_data, weekly_data = data.create_observation(time_initial)
@@ -30,10 +30,10 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
         capital = cash + equity
         cntr = 0
         closes = []
-        capital_history = []
-        hx_M = T.zeros(2, 64)#.to(agent.preprocess.device)
-        hx_D = T.zeros(2, 64)#.to(agent.preprocess.device)
-        hx_W = T.zeros(2, 64)#.to(agent.preprocess.device)
+        return_history = []
+        hx_M = T.zeros(2, 64)
+        hx_D = T.zeros(2, 64)
+        hx_W = T.zeros(2, 64)
         while not done:
             agent.preprocess.to('cpu')
             agent.actor.to('cpu')
@@ -61,6 +61,9 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
             if action == 1 and initial_cash < close:
                 cash = initial_cash
                 equity = (initial_equity + delta_c)
+            elif action == -1 and (initial_equity + delta_c) < close:
+                cash = initial_cash
+                equity = (initial_equity + delta_c)
             else:
                 cash = initial_cash - (action * close * gamma_comm)
                 equity = (initial_equity + delta_c) + (action * close * gamma_comm)
@@ -80,7 +83,8 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
                     ((action * (close - last_close)) / last_close)
             elif reward_type == 'traditional':
                 reward = (capital - initial_capital)
-            capital_history.append(capital)
+
+            return_history.append((1 + ((capital - initial_capital) / initial_capital)))
 
             agent.remember(minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W, action, prob, val, reward, done)
             
@@ -95,8 +99,11 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
         if learn_iters % 25 == 0:
             agent.save_models(reward_type)
         BnH_profits = ((closes[-1] / closes[2]) * 100000) - 100000
+        volatility = (np.std(return_history))
+        portfolio_expected_return = np.mean(return_history)
+        market_rate = np.mean((np.array(closes[1:]) - np.array(closes[:-1])) / np.array(closes[:-1])) + 1
 
-        sharpe = (capital - BnH_profits) / (100000 * np.std(capital_history))
+        sharpe = (portfolio_expected_return - market_rate) / volatility
 
         profit_history.append(capital - 100000)
         sharpe_history.append(sharpe)
@@ -105,7 +112,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
             'Episode Sharpe Ratio: ', np.round(sharpe, decimals=4),\
             'Sharpe Ratio Average:', np.round(np.mean(sharpe_history[-100:]), decimals=4),\
             'n_steps:', steps, 'Learning Steps: ', learn_iters)
-        if i % 25 != 0:
+        if i % 2 != 0:
             os.system('clear')
 
     plot_learning(profit_history, filename=figure_file)
