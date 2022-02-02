@@ -45,7 +45,9 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
 
             delta_c = ((close - last_close) / last_close) * initial_equity
             closes.append(close)
-            running_mean = np.mean(closes[-30:])
+            running_mean_long = np.mean(closes[-21:])
+            running_mean_medium = np.mean(closes[-13:])
+            running_mean_short = np.mean(closes[-8:])
             if action < 0:
                 cash = (initial_equity + delta_c) * -action * gamma_comm + initial_cash
                 equity = (initial_equity + delta_c) * (1 + action)
@@ -56,12 +58,14 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
             delta_capital = (capital - initial_capital) / initial_capital
             
             if reward_type == 'standard':
-                reward = ((action * (close - last_close)) / last_close) ## standard reward
+                reward = ((action * (close - last_close)) / last_close)
             elif reward_type == 'momentum':
-                reward = (action * ((close - last_close) ** 3 / (last_close))) ## momentum reward
+                reward = (action * ((running_mean_medium - running_mean_long) / (running_mean_long))) + \
+                    (action * ((running_mean_short - running_mean_medium) / (running_mean_medium))) + \
+                    (action * ((close - running_mean_short) / (running_mean_short)))
             elif reward_type == 'mean_reverting':
-                reward = (action * ((running_mean - last_close) / last_close)) + \
-                    ((action * (close - last_close)) / last_close) ## mean reverting reward
+                reward = (action * ((running_mean_long - last_close) / last_close)) + \
+                    ((action * (close - last_close)) / last_close)
             elif reward_type == 'traditional':
                 reward = (capital - initial_capital)
 
@@ -165,12 +169,8 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
 
 
 if __name__ == '__main__':
-<<<<<<< HEAD
-    for strategy in ['traditional']:
-=======
     strategies = ['traditional']
     for strategy in strategies:
->>>>>>> c1bc817e8076f05994f2574fa02e9b75113dc8fb
         train(n_episodes=100, reward_type=strategy, ticker='.INX')
     
     n_backtests = 5
