@@ -72,7 +72,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
                 learn_iters += 1
                 done = True
             
-        if learn_iters % 100 == 0:
+        if learn_iters % 25 == 0:
             agent.save_models(reward_type)
         BnH_profits = ((closes[-1] / closes[2]) * 10000) - 10000
 
@@ -87,75 +87,80 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
     plot_learning(profit_history, filename=figure_file)
     agent.save_models(reward_type)
 
-def test(steps=20000, commission_rate=0.0025, ticker='.INX'):
+def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['traditional', 'mean_reverting']):
     data = GetData(convolutional=True, ticker=ticker)
-    agent_MOM = Agent()
-    agent_MR = Agent()
-    agent_MOM.load_models('momentum')
-    agent_MR.load_models('mean_reverting')
+    agent_1 = Agent()
+    agent_2 = Agent()
+    agent_1.load_models(strategies[0])
+    agent_2.load_models(strategies[1])
     gamma_comm = 1# - commission_rate
 
     time_initial = random.randint(32, data.X_m.shape[0]-(steps+250))
     minutely_data, daily_data, weekly_data = data.create_observation(time_initial)
     done = False
-    cash_MOM = 8000
-    equity_MOM = 2000
-    capital_MOM = cash_MOM + equity_MOM
-    cash_MR = 8000
-    equity_MR = 2000
-    capital_MR = cash_MR + equity_MR
-    cntr = 0
-    max_drawdown_MOM = 0
-    capital_history_MOM = []
-    max_drawdown_MR = 0
-    capital_history_MR = []
+
+    cash_1 = 8000
+    equity_1 = 2000
+    capital_1 = cash_1 + equity_1
+
+    cash_2 = 8000
+    equity_2 = 2000
+    capital_2 = cash_2 + equity_2
+
+    max_drawdown_1 = 0
+    capital_history_1 = []
+
+    max_drawdown_2 = 0
+    capital_history_2 = []
+
     closes = []
+    cntr = 0
     while not done:
-        initial_cash_MOM = cash_MOM
-        initial_equity_MOM = equity_MOM
-        initial_cash_MR = cash_MR
-        initial_equity_MR = equity_MR
+        initial_cash_1 = cash_1
+        initial_equity_1 = equity_1
+        initial_cash_2 = cash_2
+        initial_equity_2 = equity_2
 
         last_close = data.X_m[time_initial + cntr - 1, -2]
-        action_MOM = agent_MOM.choose_action(minutely_data, daily_data, weekly_data)[0]
-        action_MR = agent_MR.choose_action(minutely_data, daily_data, weekly_data)[0]
+        action_1 = agent_1.choose_action(minutely_data, daily_data, weekly_data)[0]
+        action_2 = agent_2.choose_action(minutely_data, daily_data, weekly_data)[0]
         cntr += 1
         minutely_data, daily_data, weekly_data = data.create_observation(time_initial + cntr)
         close = data.X_m[time_initial + cntr - 1, -2]
         closes.append(close)
 
-        delta_c_MOM = ((close - last_close) / last_close) * initial_equity_MOM
+        delta_c_1 = ((close - last_close) / last_close) * initial_equity_1
         
-        if action_MOM < 0:
-            cash_MOM = (initial_equity_MOM + delta_c_MOM) * -action_MOM * gamma_comm + initial_cash_MOM
-            equity_MOM = (initial_equity_MOM + delta_c_MOM) * (1 + action_MOM)
+        if action_1 < 0:
+            cash_1 = (initial_equity_1 + delta_c_1) * -action_1 * gamma_comm + initial_cash_1
+            equity_1= (initial_equity_1 + delta_c_1) * (1 + action_1)
         else:
-            cash_MOM = initial_cash_MOM * (1 - action_MOM)
-            equity_MOM = (initial_equity_MOM + delta_c_MOM) + initial_cash_MOM * action_MOM * gamma_comm
-        capital_MOM = cash_MOM + equity_MOM
+            cash_1 = initial_cash_1 * (1 - action_1)
+            equity_1 = (initial_equity_1 + delta_c_1) + initial_cash_1 * action_1 * gamma_comm
+        capital_1 = cash_1 + equity_1
 
-        capital_history_MOM.append(capital_MOM)
-        if capital_MOM == min(capital_history_MOM):
-            max_drawdown_MOM = capital_MOM[0] - 10000
+        capital_history_1.append(capital_1)
+        if capital_1 == min(capital_history_1):
+            max_drawdown_1 = capital_1[0] - 10000
 
-        delta_c_MR = ((close - last_close) / last_close) * initial_equity_MR
+        delta_c_2 = ((close - last_close) / last_close) * initial_equity_2
 
-        if action_MR < 0:
-            cash_MR = (initial_equity_MR + delta_c_MR) * -action_MR * gamma_comm + initial_cash_MR
-            equity_MR = (initial_equity_MR + delta_c_MR) * (1 + action_MR)
+        if action_2 < 0:
+            cash_2 = (initial_equity_2 + delta_c_2) * -action_2 * gamma_comm + initial_cash_2
+            equity_2 = (initial_equity_2 + delta_c_2) * (1 + action_2)
         else:
-            cash_MR = initial_cash_MR * (1 - action_MR)
-            equity_MR = (initial_equity_MR + delta_c_MR) + initial_cash_MR * action_MR * gamma_comm
-        capital_MR = cash_MR + equity_MR
+            cash_2 = initial_cash_2 * (1 - action_2)
+            equity_2 = (initial_equity_2 + delta_c_2) + initial_cash_2 * action_2 * gamma_comm
+        capital_2 = cash_2 + equity_2
 
-        capital_history_MR.append(capital_MR)
-        if capital_MR == min(capital_history_MR):
-            max_drawdown_MR = capital_MR[0] - 10000
+        capital_history_2.append(capital_2)
+        if capital_2 == min(capital_history_2):
+            max_drawdown_2 = capital_2[0] - 10000
 
         if cntr >= steps:
             done = True
-    print('Total Momentum Profits: $', np.round((capital_MOM-10000)[0], decimals=2), 'Max Drawdown $', np.round(max_drawdown_MOM, decimals=2))
-    print('Total Mean Reversion Profits: $', np.round((capital_MR-10000)[0], decimals=2), 'Max Drawdown $', np.round(max_drawdown_MR, decimals=2))
+    print(f'Total {strategy[0]} Profits: $', np.round((capital_1-10000)[0], decimals=2), 'Max Drawdown $', np.round(max_drawdown_1, decimals=2))
+    print(f'Total {strategy[1]} Profits: $', np.round((capital_2-10000)[0], decimals=2), 'Max Drawdown $', np.round(max_drawdown_2, decimals=2))
     print('Total Buy and Hold Profits: $', np.round(10000 * (closes[-1] / closes[0]) - 10000, decimals=2))
 
 
