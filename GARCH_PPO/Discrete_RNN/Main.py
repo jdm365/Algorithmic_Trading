@@ -17,7 +17,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
 
     figure_file = 'Profit_History.png'
     profit_history = []
-    BnH_profit_history = []
+    sharpe_history = []
     learn_iters = 0
     steps = 0
 
@@ -30,6 +30,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
         capital = cash + equity
         cntr = 0
         closes = []
+        capital_history = []
         hx_M = T.zeros(2, minutely_data.shape[0], 64).to(agent.preprocess.device)
         hx_D = T.zeros(2, daily_data.shape[0], 64).to(agent.preprocess.device)
         hx_W = T.zeros(2, weekly_data.shape[0], 64).to(agent.preprocess.device)
@@ -76,7 +77,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
                     ((action * (close - last_close)) / last_close)
             elif reward_type == 'traditional':
                 reward = (capital - initial_capital)
-
+            capital_history.append(capital)
             agent.remember(observation, action, prob, val, reward, done)
             
             if steps % agent.N == 0:
@@ -88,13 +89,15 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
             agent.save_models(reward_type)
         BnH_profits = ((closes[-1] / closes[2]) * 100000) - 100000
 
-        BnH_profit_history.append(BnH_profits)
+        sharpe = (capital - BnH_profits) / np.std(capital_history)
+
         profit_history.append(capital - 100000)
+        sharpe_history.append(sharpe)
+
         print('Strategy:', reward_type, 'Episode Profits: $', profit_history[-1],\
-            'Episode Relative Profits: $', np.round((profit_history[-1] - BnH_profits), decimals=2),\
-            'Relative Profit History Average: $', np.round(np.mean(profit_history[-100:])\
-            - np.mean(BnH_profit_history[-100:]), decimals=2), 'n_steps:',\
-            steps, 'Learning Steps: ', learn_iters)
+            'Episode Sharpe Ratio: ', np.round(sharpe, decimals=2),\
+            'Sharpe Ratio Average:', np.round(np.mean(sharpe_history[-100:]), decimals=2),\
+            'n_steps:', steps, 'Learning Steps: ', learn_iters)
 
     plot_learning(profit_history, filename=figure_file)
     agent.save_models(reward_type)
