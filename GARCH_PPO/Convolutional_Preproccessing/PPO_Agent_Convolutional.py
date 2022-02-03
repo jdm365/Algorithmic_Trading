@@ -112,7 +112,7 @@ class Preproccess(nn.Module):
         D = self.daily_network(daily_data)
         W = self.weekly_network(weekly_data)
         input = T.cat((M, D, W), dim=-2)
-        output = self.output(input)
+        output = T.squeeze(self.output(input))
         return output
     
     def save_checkpoint(self, reward_type):
