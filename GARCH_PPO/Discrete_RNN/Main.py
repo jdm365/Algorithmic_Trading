@@ -35,6 +35,12 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
         hx_D = T.zeros(2, 64)
         hx_W = T.zeros(2, 64)
         while not done:
+            if i == 0:
+                print('Strategy:', reward_type, 'Episode Profits: $', profit_history[-1],\
+                'Episode Sharpe Ratio: ', np.round(sharpe, decimals=4),\
+                'Sharpe Ratio Average:', np.round(np.mean(sharpe_history[-100:]), decimals=4),\
+                'n_steps:', steps, 'Learning Steps: ', learn_iters)
+
             agent.preprocess.to('cpu')
             agent.actor.to('cpu')
             agent.critic.to('cpu')
@@ -108,12 +114,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
         profit_history.append(capital - 100000)
         sharpe_history.append(sharpe)
 
-        print('Strategy:', reward_type, 'Episode Profits: $', profit_history[-1],\
-            'Episode Sharpe Ratio: ', np.round(sharpe, decimals=4),\
-            'Sharpe Ratio Average:', np.round(np.mean(sharpe_history[-100:]), decimals=4),\
-            'n_steps:', steps, 'Learning Steps: ', learn_iters)
-        if i % 2 != 0:
-            os.system('clear')
+        os.system('clear')
 
     plot_learning(profit_history, filename=figure_file)
     agent.save_models(reward_type)
