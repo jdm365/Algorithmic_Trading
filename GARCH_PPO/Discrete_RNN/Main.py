@@ -68,25 +68,27 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
                 cash = initial_cash - (action * close * gamma_comm)
                 equity = (initial_equity + delta_c) + (action * close * gamma_comm)
             action += 1
-
             capital = cash + equity
+
             
             if reward_type == 'standard':
                 reward = ((action * (close - last_close)) / last_close)
+
             elif reward_type == 'momentum':
                 reward = (action * ((running_mean_medium - running_mean_long) / (running_mean_long))) + \
                     2*(action * ((running_mean_short - running_mean_medium) / (running_mean_medium))) + \
                     3*(action * ((last_close - running_mean_short) / (running_mean_short))) + \
                     4*(action * ((close - last_close) / (last_close)))
+
             elif reward_type == 'mean_reverting':
                 reward = (action * ((running_mean_long - last_close) / last_close)) + \
                     ((action * (close - last_close)) / last_close)
+
             elif reward_type == 'traditional':
                 reward = (capital - initial_capital)
+            agent.remember(minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W, action, prob, val, reward, done)
 
             return_history.append((1 + ((capital - initial_capital) / initial_capital)))
-
-            agent.remember(minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W, action, prob, val, reward, done)
             
             if steps % agent.N == 0:
                 agent.preprocess.to(device)
@@ -98,7 +100,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
             
         if learn_iters % 25 == 0:
             agent.save_models(reward_type)
-        BnH_profits = ((closes[-1] / closes[2]) * 100000) - 100000
+
         volatility = (np.std(return_history))
         portfolio_expected_return = np.mean(return_history)
         market_rate = np.mean((np.array(closes[1:]) - np.array(closes[:-1])) / np.array(closes[:-1])) + 1
@@ -112,6 +114,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
             'Episode Sharpe Ratio: ', np.round(sharpe, decimals=4),\
             'Sharpe Ratio Average:', np.round(np.mean(sharpe_history[-100:]), decimals=4),\
             'n_steps:', steps, 'Learning Steps: ', learn_iters)
+
         if i % 2 == 0:
             os.system('clear')
 
@@ -164,11 +167,11 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
 
         action_1 -= 1
         if action_1 == 1 and initial_cash_1 < close:
-            cash = initial_cash_1
-            equity = (initial_equity_1 + delta_c_1)
+            cash_1 = initial_cash_1
+            equity_1 = (initial_equity_1 + delta_c_1)
         else:
-            cash = initial_cash_1 - (action_1 * close * gamma_comm)
-            equity = (initial_equity_1 + delta_c_1) + (action_1 * close * gamma_comm)
+            cash_1 = initial_cash_1 - (action_1 * close * gamma_comm)
+            equity_1 = (initial_equity_1 + delta_c_1) + (action_1 * close * gamma_comm)
         action_1 += 1
         capital_1 = cash_1 + equity_1
 
@@ -180,11 +183,11 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
 
         action_2 -= 1
         if action_2 == 1 and initial_cash_2 < close:
-            cash = initial_cash_2
-            equity = (initial_equity_2 + delta_c_2)
+            cash_2 = initial_cash_2
+            equity_2 = (initial_equity_2 + delta_c_2)
         else:
-            cash = initial_cash_2 - (action_2 * close * gamma_comm)
-            equity = (initial_equity_2 + delta_c_2) + (action_2 * close * gamma_comm)
+            cash_2 = initial_cash_2 - (action_2 * close * gamma_comm)
+            equity_2 = (initial_equity_2 + delta_c_2) + (action_2 * close * gamma_comm)
         action_2 += 1
         capital_2 = cash_2 + equity_2
 
