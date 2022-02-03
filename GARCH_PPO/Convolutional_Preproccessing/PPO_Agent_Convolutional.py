@@ -73,7 +73,7 @@ class Preproccess(nn.Module):
             nn.BatchNorm2d(20),
             nn.Dropout2d(.2),
             nn.ReLU(),
-            nn.Conv2d(in_channels=20, out_channels=1, kernel_size=(32,1)),
+            nn.Conv2d(in_channels=20, out_channels=1, kernel_size=(24,1)),
             nn.BatchNorm2d(1)
         )
 
@@ -85,7 +85,7 @@ class Preproccess(nn.Module):
             nn.BatchNorm2d(22),
             nn.Dropout2d(.2),
             nn.ReLU(),
-            nn.Conv2d(in_channels=22, out_channels=1, kernel_size=(23,1)),
+            nn.Conv2d(in_channels=22, out_channels=1, kernel_size=(13,1)),
             nn.BatchNorm2d(1)
         )
 
@@ -97,9 +97,11 @@ class Preproccess(nn.Module):
             nn.BatchNorm2d(16),
             nn.Dropout2d(.2),
             nn.ReLU(),
-            nn.Conv2d(in_channels=16, out_channels=1, kernel_size=(23,1)),
+            nn.Conv2d(in_channels=16, out_channels=1, kernel_size=(13,1)),
             nn.BatchNorm2d(1)
         )
+
+        self.output = nn.Conv2d(in_channels=3, out_channels=1, kernel_size=(5,1))
 
         self.optimizer = optim.Adam(self.parameters(), lr=lr)
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
@@ -109,7 +111,9 @@ class Preproccess(nn.Module):
         M = self.minutely_network(minutely_data)
         D = self.daily_network(daily_data)
         W = self.weekly_network(weekly_data)
-        return T.squeeze(T.cat((M, D, W), dim=-2))
+        input = T.cat((M, D, W), dim=-2)
+        output = self.output(input)
+        return output
     
     def save_checkpoint(self, reward_type):
         T.save(self.state_dict(), self.checkpoint_dir + '/' + reward_type + '_' + self.filename)
