@@ -111,7 +111,7 @@ class Preproccess(nn.Module):
         M = self.minutely_network(minutely_data)
         D = self.daily_network(daily_data)
         W = self.weekly_network(weekly_data)
-        input = T.cat((M, D, W), dim=-2)
+        input = T.cat((M, D, W), dim=1)
         output = T.squeeze(self.output(input))
         return output
     
