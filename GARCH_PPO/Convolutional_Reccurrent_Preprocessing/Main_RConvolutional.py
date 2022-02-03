@@ -16,7 +16,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
     gamma_comm = 1#\ - commission_rate
 
     figure_file = 'Profit_History.png'
-    profit_history = []
+    return_history = []
     sharpe_history = []
     learn_iters = 0
     steps = 0
@@ -29,7 +29,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
         done = False
         cash = starting_capital / 2
         equity = starting_capital / 2
-        capital = cash + equity
+        capital = starting_capital
         cntr = 0
         closes = []
         return_history = []
@@ -80,6 +80,8 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
             elif reward_type == 'traditional':
                 reward = ((capital - initial_capital) / initial_capital) - ((equity - initial_equity) / initial_equity)
             agent.remember(minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W, action, prob, val, reward, done)
+
+            return_history.append((1 + ((capital - initial_capital) / initial_capital)))
             
             if steps % agent.N == 0:
                 agent.preprocess.to(device)
@@ -92,31 +94,29 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
         if learn_iters % 25 == 0:
             agent.save_models(reward_type)
 
-        volatility = (np.std(return_history))
-        portfolio_expected_return = np.mean(return_history)
-        market_rate = np.mean((np.array(closes[1:]) - np.array(closes[:-1])) / np.array(closes[:-1])) + 1
-        risk_free_rate = 1
+        volatility = (np.std(return_history)) / np.sqrt(24)
+        portfolio_expected_return = np.mean(return_history) ** 24
+        market_rate = (np.mean((np.array(closes[1:]) - np.array(closes[:-1])) / np.array(closes[:-1])) + 1) ** 24
+        risk_free_rate = 1.0001
 
         #sharpe = (portfolio_expected_return - market_rate) / volatility
         sharpe = (portfolio_expected_return - risk_free_rate) / volatility
-        
-        profit_history.append(capital - starting_capital)
         sharpe_history.append(sharpe)
 
-        print('Strategy:', reward_type, 'Episode Profits: $', profit_history[-1],\
-            'Episode Sharpe Ratio: ', np.round(sharpe, decimals=4),\
+        print('Strategy:', reward_type, 'Episode Returns:', 100 * (capital - starting_capital) / starting_capital,\
+            '% Episode Sharpe Ratio: ', np.round(sharpe, decimals=4),\
             'Sharpe Ratio Average:', np.round(np.mean(sharpe_history[-100:]), decimals=4),\
             'n_steps:', steps, 'Learning Steps: ', learn_iters)
 
         if i % 5 == 0:
             os.system('clear')
     
-    print('Strategy:', reward_type, 'Episode Profits: $', profit_history[-1],\
+    print('Strategy:', reward_type, 'Episode Returns:', 100 * (capital - starting_capital) / starting_capital,\
            'Episode Sharpe Ratio: ', np.round(sharpe, decimals=4),\
            'Sharpe Ratio Average:', np.round(np.mean(sharpe_history[-100:]), decimals=4),\
            'n_steps:', steps, 'Learning Steps: ', learn_iters)
 
-    plot_learning(profit_history, filename=figure_file)
+    plot_learning(return_history, filename=figure_file)
     agent.save_models(reward_type)
 
 def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['traditional', 'mean_reverting']):

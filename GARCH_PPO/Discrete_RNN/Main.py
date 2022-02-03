@@ -26,9 +26,9 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
         time_initial = random.randint(50, data.X_m.shape[0]-3072)
         minutely_data, daily_data, weekly_data = data.create_observation(time_initial)
         done = False
-        cash = starting_capital // 2
-        equity = starting_capital // 2
-        capital = cash + equity
+        cash = starting_capital / 2
+        equity = starting_capital / 2
+        capital = starting_capital
         cntr = 0
         closes = []
         return_history = []
@@ -106,23 +106,21 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
         portfolio_expected_return = np.mean(return_history)
         market_rate = np.mean((np.array(closes[1:]) - np.array(closes[:-1])) / np.array(closes[:-1])) + 1
         risk_free_rate = 1
-
+2
         #sharpe = (portfolio_expected_return - market_rate) / volatility
         sharpe = (portfolio_expected_return - risk_free_rate) / volatility
-        
-        profit_history.append(capital - starting_capital)
         sharpe_history.append(sharpe)
 
-        print('Strategy:', reward_type, 'Episode Profits: $', profit_history[-1],\
-            'Episode Sharpe Ratio: ', np.round(sharpe, decimals=4),\
+        print('Strategy:', reward_type, 'Episode Returns:', 100 * (capital - starting_capital) / starting_capital,\
+            '% Episode Sharpe Ratio: ', np.round(sharpe, decimals=4),\
             'Sharpe Ratio Average:', np.round(np.mean(sharpe_history[-100:]), decimals=4),\
             'n_steps:', steps, 'Learning Steps: ', learn_iters)
 
         if i % 2 == 0:
             os.system('clear')
     
-    print('Strategy:', reward_type, 'Episode Profits: $', profit_history[-1],\
-           'Episode Sharpe Ratio: ', np.round(sharpe, decimals=4),\
+    print('Strategy:', reward_type, 'Episode Returns:', 100 * (capital - starting_capital) / starting_capital,\
+           '% Episode Sharpe Ratio: ', np.round(sharpe, decimals=4),\
            'Sharpe Ratio Average:', np.round(np.mean(sharpe_history[-100:]), decimals=4),\
            'n_steps:', steps, 'Learning Steps: ', learn_iters)
 
@@ -236,7 +234,7 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
 if __name__ == '__main__':
     strategies = ['traditional', 'mean_reverting']
     for strategy in [strategies[0]]:
-        train(n_episodes=3000, reward_type=strategy, ticker='.INX2')
+        train(n_episodes=000, reward_type=strategy, ticker='.INX2')
     
     n_backtests = 3
     for _ in range(n_backtests):
