@@ -140,7 +140,7 @@ class ActorNetwork(nn.Module):
         probabilities = Normal(mu, sigma)
         action = probabilities.sample()
 
-        action = T.tanh(action).to(self.device)
+        action = T.tanh(action)
         log_probs = probabilities.log_prob(action)
         return action, log_probs
 
