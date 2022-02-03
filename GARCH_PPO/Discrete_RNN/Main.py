@@ -12,7 +12,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
     shutup.please()
     data = GetData(convolutional=True, ticker=ticker)
     agent = Agent()
-    gamma_comm = 1#\ - commission_rate
+    gamma_comm = 1 - commission_rate
 
     figure_file = 'Profit_History.png'
     profit_history = []
@@ -25,8 +25,8 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
         time_initial = random.randint(50, data.X_m.shape[0]-3072)
         minutely_data, daily_data, weekly_data = data.create_observation(time_initial)
         done = False
-        cash = 50000
-        equity = 50000
+        cash = 500000
+        equity = 500000
         capital = cash + equity
         cntr = 0
         closes = []
@@ -85,7 +85,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
                     ((action * (close - last_close)) / last_close)
 
             elif reward_type == 'traditional':
-                reward = (capital - initial_capital)
+                reward = ((capital - initial_capital) / initial_capital) - ((equity - initial_equity) / initial_equity)
             agent.remember(minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W, action, prob, val, reward, done)
 
             return_history.append((1 + ((capital - initial_capital) / initial_capital)))
@@ -109,7 +109,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
         #sharpe = (portfolio_expected_return - market_rate) / volatility
         sharpe = (portfolio_expected_return - risk_free_rate) / volatility
         
-        profit_history.append(capital - 100000)
+        profit_history.append(capital - 1000000)
         sharpe_history.append(sharpe)
 
         print('Strategy:', reward_type, 'Episode Profits: $', profit_history[-1],\
@@ -144,18 +144,18 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
     agent_2.actor.to('cpu')
     agent_2.critic.to('cpu')
 
-    gamma_comm = 1# - commission_rate
+    gamma_comm = 1 - commission_rate
 
     time_initial = random.randint(32, data.X_m.shape[0]-(steps+250))
     minutely_data, daily_data, weekly_data = data.create_observation(time_initial)
     done = False
 
-    cash_1 = 80000
-    equity_1 = 20000
+    cash_1 = 500000
+    equity_1 = 500000
     capital_1 = cash_1 + equity_1
 
-    cash_2 = 80000
-    equity_2 = 20000
+    cash_2 = 500000
+    equity_2 = 500000
     capital_2 = cash_2 + equity_2
 
     max_drawdown_1 = 0
@@ -202,7 +202,7 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
 
             capital_history_1.append(capital_1)
             if capital_1 == min(capital_history_1):
-                max_drawdown_1 = capital_1 - 100000
+                max_drawdown_1 = capital_1 - 1000000
 
             delta_c_2 = ((close - last_close) / last_close) * initial_equity_2
 
@@ -218,25 +218,24 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
                 equity_2 = (initial_equity_2 + delta_c_1) + (action_2 * close * gamma_comm)
             action_2 += 1
             capital_2 = cash_2 + equity_2
-
             capital_history_2.append(capital_2)
             if capital_2 == min(capital_history_2):
-                max_drawdown_2 = capital_2 - 100000
+                max_drawdown_2 = capital_2 - 1000000
             
             if cntr >= steps:
                 done = True
-    print(f'Total {strategies[0]} Profits: $', np.round((capital_1-100000), decimals=2), \
+    print(f'Total {strategies[0]} Profits: $', np.round((capital_1-1000000), decimals=2), \
         'Max Drawdown $', np.round(max_drawdown_1, decimals=2))
-    print(f'Total {strategies[1]} Profits: $', np.round((capital_2-100000), decimals=2), \
+    print(f'Total {strategies[1]} Profits: $', np.round((capital_2-1000000), decimals=2), \
         'Max Drawdown $', np.round(max_drawdown_2, decimals=2))
-    print('Total Buy and Hold Profits: $', np.round(100000 * (closes[-1] / closes[0]) \
-        - 10000, decimals=2))
+    print('Total Buy and Hold Profits: $', np.round(1000000 * ((closes[-1] - closes[0]) / closes[0])\
+        , decimals=2))
 
 
 if __name__ == '__main__':
-    strategies = ['momentum', 'mean_reverting']
-    #for strategy in strategies:
-    #    train(n_episodes=1500, reward_type=strategy, ticker='.INX2')
+    strategies = ['traditional', 'mean_reverting']
+    for strategy in [strategies[0]]:
+        train(n_episodes=3000, reward_type=strategy, ticker='.INX2')
     
     n_backtests = 3
     for _ in range(n_backtests):
