@@ -35,7 +35,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
         hx_D = T.zeros(2, 64)
         hx_W = T.zeros(2, 64)
         while not done:
-            if i == 0:
+            if i != 0:
                 print('Strategy:', reward_type, 'Episode Profits: $', profit_history[-1],\
                 'Episode Sharpe Ratio: ', np.round(sharpe, decimals=4),\
                 'Sharpe Ratio Average:', np.round(np.mean(sharpe_history[-100:]), decimals=4),\
