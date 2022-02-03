@@ -19,14 +19,15 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
     sharpe_history = []
     learn_iters = 0
     steps = 0
+    starting_capital = 100000
 
     for i in tqdm(range(n_episodes), desc=f'{reward_type}'):
         device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         time_initial = random.randint(50, data.X_m.shape[0]-3072)
         minutely_data, daily_data, weekly_data = data.create_observation(time_initial)
         done = False
-        cash = 500000
-        equity = 500000
+        cash = starting_capital // 2
+        equity = starting_capital // 2
         capital = cash + equity
         cntr = 0
         closes = []
@@ -109,7 +110,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
         #sharpe = (portfolio_expected_return - market_rate) / volatility
         sharpe = (portfolio_expected_return - risk_free_rate) / volatility
         
-        profit_history.append(capital - 1000000)
+        profit_history.append(capital - starting_capital)
         sharpe_history.append(sharpe)
 
         print('Strategy:', reward_type, 'Episode Profits: $', profit_history[-1],\
