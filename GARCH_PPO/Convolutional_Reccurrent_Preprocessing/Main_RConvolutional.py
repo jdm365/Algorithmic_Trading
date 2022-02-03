@@ -78,7 +78,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
                 reward = (action * ((running_mean_long - last_close) / last_close)) + \
                     ((action * (close - last_close)) / last_close)
             elif reward_type == 'traditional':
-                reward = (capital - initial_capital)
+                reward = ((capital - initial_capital) / initial_capital) - ((equity - initial_equity) / initial_equity)
             agent.remember(minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W, action, prob, val, reward, done)
             
             if steps % agent.N == 0:
@@ -197,10 +197,10 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
     os.system('clear')
 
 if __name__ == '__main__':
-    strategies = ['standard', 'momentum', 'mean_reverting']
+    strategies = ['traditional', 'momentum', 'mean_reverting']
     for strategy in strategies:
-        train(n_episodes=500, reward_type=strategy, ticker='.INX2')
+        train(n_episodes=1000, reward_type=strategy, ticker='.INX2')
     
-    n_backtests = 5
-    for _ in range(n_backtests):
-        test(ticker='.INX2', strategies=strategies[1:3])
+    #n_backtests = 5
+    #for _ in range(n_backtests):
+    #    test(ticker='.INX2', strategies=strategies[1:3])
