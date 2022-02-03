@@ -219,9 +219,9 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
             print(cntr)
             if cntr >= steps:
                 done = True
-        print(f'Total {strategies[0]} Profits: $', np.round((capital_1-100000)[0], decimals=2), \
+        print(f'Total {strategies[0]} Profits: $', np.round((capital_1-100000), decimals=2), \
             'Max Drawdown $', np.round(max_drawdown_1, decimals=2))
-        print(f'Total {strategies[1]} Profits: $', np.round((capital_2-100000)[0], decimals=2), \
+        print(f'Total {strategies[1]} Profits: $', np.round((capital_2-100000), decimals=2), \
             'Max Drawdown $', np.round(max_drawdown_2, decimals=2))
         print('Total Buy and Hold Profits: $', np.round(100000 * (closes[-1] / closes[0]) \
             - 10000, decimals=2))
@@ -229,8 +229,8 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
 
 if __name__ == '__main__':
     strategies = ['momentum', 'mean_reverting']
-    #for strategy in strategies:
-    #    train(n_episodes=250, reward_type=strategy, ticker='.INX2')
+    for strategy in strategies:
+        train(n_episodes=250, reward_type=strategy, ticker='.INX2')
     
     n_backtests = 3
     for _ in range(n_backtests):
