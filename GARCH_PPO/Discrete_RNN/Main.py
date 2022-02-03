@@ -171,14 +171,15 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
     hx_D = T.zeros(2, 64)
     hx_W = T.zeros(2, 64)
     while not done:
-        initial_cash_1 = cash_1
-        initial_equity_1 = equity_1
-        initial_cash_2 = cash_2
-        initial_equity_2 = equity_2
+        with T.no_grad():
+            initial_cash_1 = cash_1
+            initial_equity_1 = equity_1
+            initial_cash_2 = cash_2
+            initial_equity_2 = equity_2
 
         last_close = data.X_m[time_initial + cntr - 1, -2]
-        action_1, hx_M, hx_D, hx_W = agent_1.choose_action(minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W)
-        action_2, hx_M, hx_D, hx_W = agent_2.choose_action(minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W)
+        action_1,  _, _, _, _, _, hx_M, hx_D, hx_W = agent_1.choose_action(minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W)
+        action_2,  _, _, _, _, _, hx_M, hx_D, hx_W = agent_2.choose_action(minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W)
         cntr += 1
         minutely_data, daily_data, weekly_data = data.create_observation(time_initial + cntr)
         close = data.X_m[time_initial + cntr - 1, -2]
@@ -198,7 +199,7 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
 
         capital_history_1.append(capital_1)
         if capital_1 == min(capital_history_1):
-            max_drawdown_1 = capital_1[0] - 100000
+            max_drawdown_1 = capital_1 - 100000
 
         delta_c_2 = ((close - last_close) / last_close) * initial_equity_2
 
@@ -214,8 +215,8 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
 
         capital_history_2.append(capital_2)
         if capital_2 == min(capital_history_2):
-            max_drawdown_2 = capital_2[0] - 100000
-
+            max_drawdown_2 = capital_2 - 100000
+        print(cntr)
         if cntr >= steps:
             done = True
     print(f'Total {strategy[0]} Profits: $', np.round((capital_1-100000)[0], decimals=2), \
