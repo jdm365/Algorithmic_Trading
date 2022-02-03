@@ -104,9 +104,11 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
         volatility = (np.std(return_history))
         portfolio_expected_return = np.mean(return_history)
         market_rate = np.mean((np.array(closes[1:]) - np.array(closes[:-1])) / np.array(closes[:-1])) + 1
+        risk_free_rate = 1
 
-        sharpe = (portfolio_expected_return - market_rate) / volatility
-
+        #sharpe = (portfolio_expected_return - market_rate) / volatility
+        sharpe = (portfolio_expected_return - risk_free_rate) / volatility
+        
         profit_history.append(capital - 100000)
         sharpe_history.append(sharpe)
 
@@ -117,16 +119,31 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
 
         if i % 2 == 0:
             os.system('clear')
+    
+    print('Strategy:', reward_type, 'Episode Profits: $', profit_history[-1],\
+           'Episode Sharpe Ratio: ', np.round(sharpe, decimals=4),\
+           'Sharpe Ratio Average:', np.round(np.mean(sharpe_history[-100:]), decimals=4),\
+           'n_steps:', steps, 'Learning Steps: ', learn_iters)
 
     plot_learning(profit_history, filename=figure_file)
     agent.save_models(reward_type)
 
 def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['traditional', 'mean_reverting']):
+    shutup.please()
     data = GetData(convolutional=True, ticker=ticker)
     agent_1 = Agent()
     agent_2 = Agent()
     agent_1.load_models(strategies[0])
     agent_2.load_models(strategies[1])
+    
+    agent_1.preprocess.to('cpu')
+    agent_1.actor.to('cpu')
+    agent_1.critic.to('cpu')
+    
+    agent_2.preprocess.to('cpu')
+    agent_2.actor.to('cpu')
+    agent_2.critic.to('cpu')
+
     gamma_comm = 1# - commission_rate
 
     time_initial = random.randint(32, data.X_m.shape[0]-(steps+250))
@@ -149,6 +166,10 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
 
     closes = []
     cntr = 0
+    
+    hx_M = T.zeros(2, 64)
+    hx_D = T.zeros(2, 64)
+    hx_W = T.zeros(2, 64)
     while not done:
         initial_cash_1 = cash_1
         initial_equity_1 = equity_1
@@ -156,8 +177,8 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
         initial_equity_2 = equity_2
 
         last_close = data.X_m[time_initial + cntr - 1, -2]
-        action_1 = agent_1.choose_action(minutely_data, daily_data, weekly_data)[0]
-        action_2 = agent_2.choose_action(minutely_data, daily_data, weekly_data)[0]
+        action_1, hx_M, hx_D, hx_W = agent_1.choose_action(minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W)
+        action_2, hx_M, hx_D, hx_W = agent_2.choose_action(minutely_data, daily_data, weekly_data, hx_M, hx_D, hx_W)
         cntr += 1
         minutely_data, daily_data, weekly_data = data.create_observation(time_initial + cntr)
         close = data.X_m[time_initial + cntr - 1, -2]
@@ -206,10 +227,10 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
 
 
 if __name__ == '__main__':
-    strategies = ['standard', 'momentum', 'mean_reverting']
-    for strategy in strategies:
-        train(n_episodes=500, reward_type=strategy, ticker='.INX2')
+    strategies = ['momentum', 'mean_reverting']
+    #for strategy in strategies:
+    #    train(n_episodes=250, reward_type=strategy, ticker='.INX2')
     
-    n_backtests = 5
+    n_backtests = 3
     for _ in range(n_backtests):
-        test(ticker='.INX2', strategies=strategies[1:3])
+        test(ticker='.INX2', strategies=strategies)
