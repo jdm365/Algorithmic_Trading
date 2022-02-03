@@ -191,6 +191,9 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
             if action_1 == 1 and initial_cash_1 < close:
                 cash_1 = initial_cash_1
                 equity_1 = (initial_equity_1 + delta_c_1)
+            elif action_1 == -1 and (initial_equity_1 + delta_c_1) < close:
+                cash_1 = initial_cash_1
+                equity_1 = (initial_equity_1 + delta_c_1)
             else:
                 cash_1 = initial_cash_1 - (action_1 * close * gamma_comm)
                 equity_1 = (initial_equity_1 + delta_c_1) + (action_1 * close * gamma_comm)
@@ -206,31 +209,34 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
             action_2 -= 1
             if action_2 == 1 and initial_cash_2 < close:
                 cash_2 = initial_cash_2
+                equity_2 = (initial_equity_2 + delta_c_1)
+            elif action_2 == -1 and (initial_equity_2 + delta_c_2) < close:
+                cash_2 = initial_cash_2
                 equity_2 = (initial_equity_2 + delta_c_2)
             else:
                 cash_2 = initial_cash_2 - (action_2 * close * gamma_comm)
-                equity_2 = (initial_equity_2 + delta_c_2) + (action_2 * close * gamma_comm)
+                equity_2 = (initial_equity_2 + delta_c_1) + (action_2 * close * gamma_comm)
             action_2 += 1
             capital_2 = cash_2 + equity_2
 
             capital_history_2.append(capital_2)
             if capital_2 == min(capital_history_2):
                 max_drawdown_2 = capital_2 - 100000
-            print(cntr)
+            
             if cntr >= steps:
                 done = True
-        print(f'Total {strategies[0]} Profits: $', np.round((capital_1-100000), decimals=2), \
-            'Max Drawdown $', np.round(max_drawdown_1, decimals=2))
-        print(f'Total {strategies[1]} Profits: $', np.round((capital_2-100000), decimals=2), \
-            'Max Drawdown $', np.round(max_drawdown_2, decimals=2))
-        print('Total Buy and Hold Profits: $', np.round(100000 * (closes[-1] / closes[0]) \
-            - 10000, decimals=2))
+    print(f'Total {strategies[0]} Profits: $', np.round((capital_1-100000), decimals=2), \
+        'Max Drawdown $', np.round(max_drawdown_1, decimals=2))
+    print(f'Total {strategies[1]} Profits: $', np.round((capital_2-100000), decimals=2), \
+        'Max Drawdown $', np.round(max_drawdown_2, decimals=2))
+    print('Total Buy and Hold Profits: $', np.round(100000 * (closes[-1] / closes[0]) \
+        - 10000, decimals=2))
 
 
 if __name__ == '__main__':
     strategies = ['momentum', 'mean_reverting']
-    for strategy in strategies:
-        train(n_episodes=250, reward_type=strategy, ticker='.INX2')
+    #for strategy in strategies:
+    #    train(n_episodes=1500, reward_type=strategy, ticker='.INX2')
     
     n_backtests = 3
     for _ in range(n_backtests):
