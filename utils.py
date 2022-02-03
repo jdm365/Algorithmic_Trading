@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import torch as T
 import torch.nn as nn
 
-def plot_learning(scores, filename=None, x=None, window=5):   
+def plot_learning(scores, filename=None, x=None, window=100):   
     N = len(scores)
     running_avg = np.empty(N)
     for t in range(N):
