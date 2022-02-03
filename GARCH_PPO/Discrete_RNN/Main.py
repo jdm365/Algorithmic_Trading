@@ -106,7 +106,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
         portfolio_expected_return = np.mean(return_history)
         market_rate = np.mean((np.array(closes[1:]) - np.array(closes[:-1])) / np.array(closes[:-1])) + 1
         risk_free_rate = 1
-2
+
         #sharpe = (portfolio_expected_return - market_rate) / volatility
         sharpe = (portfolio_expected_return - risk_free_rate) / volatility
         sharpe_history.append(sharpe)

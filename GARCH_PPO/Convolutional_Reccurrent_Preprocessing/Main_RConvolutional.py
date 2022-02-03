@@ -94,7 +94,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
         if learn_iters % 25 == 0:
             agent.save_models(reward_type)
 
-        volatility = (np.std(return_history)) / np.sqrt(24)
+        volatility = (np.std(return_history)) * np.sqrt(24)
         portfolio_expected_return = np.mean(return_history) ** 24
         market_rate = (np.mean((np.array(closes[1:]) - np.array(closes[:-1])) / np.array(closes[:-1])) + 1) ** 24
         risk_free_rate = 1.0001
