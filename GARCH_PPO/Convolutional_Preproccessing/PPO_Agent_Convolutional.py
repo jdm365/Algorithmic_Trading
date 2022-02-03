@@ -1,3 +1,4 @@
+from calendar import week
 import torch as T
 from torch.cuda import is_available
 import torch.nn as nn
@@ -9,7 +10,9 @@ from pathlib import Path
 
 class PPOMemory:
     def __init__(self, batch_size):
-        self.states = []
+        self.minutely_states = []
+        self.daily_states = []
+        self.weekly_states = []
         self.probs = []
         self.vals = []
         self.actions = []
@@ -19,11 +22,13 @@ class PPOMemory:
         self.batch_size = batch_size
 
     def generate_batches(self):
-        n_states = len(self.states)
+        n_states = len(self.minutely_states)
         batch_start = np.arange(0, n_states, self.batch_size)
         indices = np.arange(n_states, dtype=np.int64)
         batches = [indices[i: i + self.batch_size] for i in batch_start]
-        return np.array(self.states),\
+        return np.array(self.minutely_states),\
+                np.array(self.daily_states),\
+                np.array(self.weekly_states),\
                 np.array(self.actions),\
                 np.array(self.probs),\
                 np.array(self.vals),\
@@ -31,8 +36,11 @@ class PPOMemory:
                 np.array(self.dones),\
                 batches
 
-    def store_memory(self, state, action, probs, vals, reward, done):
-        self.states.append(state.cpu().detach().numpy())
+    def store_memory(self, minutely_data, daily_data, weekly_data,\
+        action, probs, vals, reward, done):
+        self.minutely_states.append(minutely_data.detach().numpy())
+        self.daily_states.append(daily_data.detach().numpy())
+        self.weekly_states.append(weekly_data.detach().numpy())
         self.actions.append(action)
         self.probs.append(probs)
         self.vals.append(vals)
@@ -40,7 +48,9 @@ class PPOMemory:
         self.dones.append(done)
 
     def clear_memory(self):
-        self.states = []
+        self.minutely_states = []
+        self.daily_states = []
+        self.weekly_states = []
         self.probs = []
         self.vals = []
         self.actions = []
@@ -49,14 +59,14 @@ class PPOMemory:
 
 
 class Preproccess(nn.Module):
-    def __init__(self, lr=3e-4):
+    def __init__(self, input_dims_minutely, input_dims_daily, input_dims_weekly, lr=3e-4):
         super(Preproccess, self).__init__()
         self.filepath = str(Path(__file__).parent)
         self.checkpoint_dir =  self.filepath + '/Trained_Models'
         self.filename = 'preproccess.pt'
 
         self.minutely_network = nn.Sequential(
-            nn.Conv2d(in_channels=4, out_channels=10, kernel_size=(3,1)),
+            nn.Conv2d(in_channels=input_dims_minutely[0], out_channels=10, kernel_size=(3,1)),
             nn.BatchNorm2d(10),
             nn.ReLU(),
             nn.Conv2d(in_channels=10, out_channels=20, kernel_size=(12,1)),
@@ -68,7 +78,7 @@ class Preproccess(nn.Module):
         )
 
         self.daily_network = nn.Sequential(
-            nn.Conv2d(in_channels=5, out_channels=10, kernel_size=(3,1)),
+            nn.Conv2d(in_channels=input_dims_daily[0], out_channels=10, kernel_size=(3,1)),
             nn.BatchNorm2d(10),
             nn.ReLU(),
             nn.Conv2d(in_channels=10, out_channels=22, kernel_size=(5,1)),
@@ -80,7 +90,7 @@ class Preproccess(nn.Module):
         )
 
         self.weekly_network = nn.Sequential(
-            nn.Conv2d(in_channels=4, out_channels=8, kernel_size=(3,1)),
+            nn.Conv2d(in_channels=input_dims_weekly[0], out_channels=8, kernel_size=(3,1)),
             nn.BatchNorm2d(8),
             nn.ReLU(),
             nn.Conv2d(in_channels=8, out_channels=16, kernel_size=(5,1)),
@@ -186,37 +196,37 @@ class Agent:
         self.gae_lambda = gae_lambda
         self.N = N
 
-        self.preprocess = Preproccess()
+        self.preprocess = Preproccess(input_dims_minutely, input_dims_daily, input_dims_weekly)
         self.actor = ActorNetwork(input_dims_actorcritic, actor_lr)
         self.critic = CriticNetwork(input_dims_actorcritic, critic_lr)
         self.memory = PPOMemory(batch_size)
 
-    def remember(self, state, action, probs, vals, reward, done):
-        self.memory.store_memory(state, action, probs, vals, reward, done)
+    def remember(self, minutely_data, daily_data, weekly_data, action, probs, vals, reward, done):
+        self.memory.store_memory(minutely_data, daily_data, weekly_data, action, probs, vals, reward, done)
 
     def choose_action(self, minutely_data, daily_data, weekly_data):
         self.preprocess.eval()
         self.actor.eval()
         self.critic.eval()
-        observation = self.preprocess.forward(minutely_data, daily_data, weekly_data)
-        state = observation.to(self.actor.device)
+
+        state = self.preprocess.forward(minutely_data, daily_data, weekly_data)
 
         action, log_probs = self.actor.sample_normal(state)
         value = self.critic(state)
 
-        log_probs = log_probs.detach().cpu().numpy().flatten()
-        action = action.detach().cpu().numpy().flatten()
-        value = value.detach().cpu().numpy().flatten()
+        log_probs = T.squeeze(log_probs).item()
+        action = T.squeeze(action).item()
+        value = T.squeeze(value).item()
         
         self.preprocess.train()
         self.actor.train()
         self.critic.train()
-        return action, log_probs, value, state
+        return action, log_probs, value, minutely_data, daily_data, weekly_data
 
     def learn(self):
         for _ in range(self.n_epochs):
-            states_arr, actions_arr, old_log_probs_arr, vals_arr, rewards_arr,\
-                dones_arr, batches = self.memory.generate_batches()
+            minutely_arr, daily_arr, weekly_arr, actions_arr, old_log_probs_arr,\
+                vals_arr, rewards_arr, dones_arr, batches = self.memory.generate_batches()
             
             advantage = np.zeros(len(rewards_arr), dtype=np.float32)
 
@@ -232,7 +242,11 @@ class Agent:
 
             values = T.tensor(vals_arr).to(self.actor.device)
             for batch in batches:
-                states = T.nan_to_num(T.tensor(states_arr[batch], dtype=T.float), nan=2e-1).to(self.actor.device)
+                minutely_states = T.tensor(minutely_arr[batch], dtype=T.float).squeeze(dim=1).to(self.preprocess.device)
+                daily_states = T.tensor(daily_arr[batch], dtype=T.float).squeeze(dim=1).to(self.preprocess.device)
+                weekly_states = T.tensor(weekly_arr[batch], dtype=T.float).squeeze(dim=1).to(self.preprocess.device)
+
+                states = self.preprocess(minutely_states, daily_states, weekly_states)
                 old_log_probs = T.tensor(old_log_probs_arr[batch]).to(self.actor.device)
 
                 critic_value = T.squeeze(self.critic(states))

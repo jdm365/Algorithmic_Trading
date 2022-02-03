@@ -11,7 +11,7 @@ import shutup
 
 def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker='.INX'):
     shutup.please()
-    data = GetData(convolutional=True, ticker=ticker)
+    data = GetData(recurrent=True, ticker=ticker)
     agent = Agent()
     gamma_comm = 1#\ - commission_rate
 
@@ -120,7 +120,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
     agent.save_models(reward_type)
 
 def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['traditional', 'mean_reverting']):
-    data = GetData(convolutional=True, ticker=ticker)
+    data = GetData(recurrent=True, ticker=ticker)
     agent_1 = Agent()
     agent_2 = Agent()
     agent_1.load_models(strategies[0])

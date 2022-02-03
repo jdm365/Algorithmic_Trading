@@ -11,9 +11,10 @@ from zmq import device
 from pathlib import Path
 
 class GetData():
-    def __init__(self, convolutional=False, ticker='AAPL'):
+    def __init__(self, convolutional=False, recurrent=True, ticker='AAPL'):
         self.filepath = str(Path(__file__).parent)
         self.convolutional = convolutional
+        self.recurrent = recurrent
         if ticker == 'AAPL':
             filename_minutely = self.filepath + \
                 '/AAPL_GARCH_PPO_v1/AAPL.USUSD_Candlestick_5_M_ASK_31.12.2018-31.12.2021.csv'
@@ -152,7 +153,7 @@ class GetData():
         X_d = self.min_max_norm(daily_tensor).to(self.device)
         X_w = self.min_max_norm(weekly_tensor).to(self.device)
 
-        if self.convolutional:
+        if self.recurrent:
             X_m = X_m.permute(1, 0).contiguous()
             X_d = X_d.permute(1, 0).contiguous()
             X_w = X_w.permute(1, 0).contiguous()
@@ -161,6 +162,20 @@ class GetData():
                 X_m = X_m.reshape(1, *X_m.shape)
                 X_d = X_d.reshape(1, *X_d.shape)
                 X_w = X_w.reshape(1, *X_w.shape)
+            else:
+                X_m = X_m.reshape(*X_m.shape, 1)
+                X_d = X_d.reshape(*X_d.shape, 1)
+                X_w = X_w.reshape(*X_w.shape, 1)
+
+        if self.convolutional:
+            X_m = X_m.permute(1, 0).contiguous()
+            X_d = X_d.permute(1, 0).contiguous()
+            X_w = X_w.permute(1, 0).contiguous()
+
+            if len(X_m.shape) != 4:
+                X_m = X_m.reshape(1, *X_m.shape, 1)
+                X_d = X_d.reshape(1, *X_d.shape, 1)
+                X_w = X_w.reshape(1, *X_w.shape, 1)
             else:
                 X_m = X_m.reshape(*X_m.shape, 1)
                 X_d = X_d.reshape(*X_d.shape, 1)
