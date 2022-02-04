@@ -22,7 +22,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
     learn_iters = 0
     steps = 0
     starting_capital = 10000
-    eta = .01
+
     for i in tqdm(range(n_episodes), desc=f'{reward_type}'):
         device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         time_initial = random.randint(50, data.X_m.shape[0]-3072)
@@ -76,7 +76,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
                 reward = (action * ((running_mean_long - last_close) / last_close)) + \
                     ((action * (close - last_close)) / last_close)
             elif reward_type == 'traditional':
-                reward = ((capital - initial_capital) / (eta + initial_capital)) - ((equity - initial_equity) / (eta + initial_equity))
+                reward = ((capital - initial_capital) / initial_capital) - ((equity - initial_equity) / initial_equity)
             agent.remember(minutely_data, daily_data, weekly_data, action, prob, val, reward, done)
 
             return_history.append((1 + ((capital - initial_capital) / initial_capital)))
@@ -115,7 +115,7 @@ def train(n_episodes=500, commission_rate=.0025, reward_type='standard', ticker=
            'Sharpe Ratio Average:', np.round(np.mean(sharpe_history[-100:]), decimals=4),\
            'n_steps:', steps, 'Learning Steps: ', learn_iters)
 
-    plot_learning(final_return_history, filename=figure_file)
+    plot_learning(final_return_history[10:], filename=figure_file)
     agent.save_models(reward_type)
 
 def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['traditional', 'mean_reverting']):
@@ -198,7 +198,7 @@ def test(steps=20000, commission_rate=0.0025, ticker='.INX', strategies=['tradit
 if __name__ == '__main__':
     strategies = ['traditional']#, 'momentum', 'mean_reverting']
     for strategy in strategies:
-        train(n_episodes=2500, reward_type=strategy, ticker='.INX2')
+        train(n_episodes=20000, reward_type=strategy, ticker='.INX2')
     
     #n_backtests = 5
     #for _ in range(n_backtests):

@@ -193,7 +193,7 @@ class Agent:
     def __init__(self, input_dims_actorcritic=8, input_dims_minutely=(4,48), 
         input_dims_daily=(5,30), input_dims_weekly=(4,30), discount=0.99, 
         actor_lr=3e-4, critic_lr=3e-4, gae_lambda=0.95, policy_clip=0.1, 
-        batch_size=64, N=64, n_epochs=2):
+        batch_size=1024, N=1024, n_epochs=4):
         self.discount = discount
         self.policy_clip = policy_clip
         self.n_epochs = n_epochs
