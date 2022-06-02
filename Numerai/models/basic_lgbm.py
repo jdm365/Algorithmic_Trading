@@ -113,10 +113,9 @@ class BasicLGBM:
         print(validation_stats[["mean", "sharpe"]].to_markdown())
         print('...Saving Validation Predictions...')
         if save_predictions:
-            validation_sample_preds.to_csv(
+            validation_sample_preds['example_preds'].to_csv(
                     f'../predictions/validation_predictions_{self.handler.current_round}.csv'
                     )
-
 
     def make_predictions(self, model, save_predictions=True):
         nans_per_col = self.handler.live_df[self.handler.live_df['data_type']\

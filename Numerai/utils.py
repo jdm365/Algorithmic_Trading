@@ -126,12 +126,20 @@ def fast_score_by_date(df, columns, target, tb=None, era_col="era"):
         else:
             tbidx = np.argsort(era_pred, axis=1)
             tbidx = np.concatenate([tbidx[:, :tb], tbidx[:, -tb:]], axis=1)
-            ccs = [np.corrcoef(era_target[tmpidx], tmppred[tmpidx])[0, 1] for tmpidx, tmppred in zip(tbidx, era_pred)]
+            ccs = [np.corrcoef(era_target[tmpidx], tmppred[tmpidx])[0, 1]\
+                    for tmpidx, tmppred in zip(tbidx, era_pred)]
             ccs = np.array(ccs)
 
         computed.append(ccs)
 
     return pd.DataFrame(np.array(computed), columns=columns, index=df[era_col].unique())
+
+def get_corrs(df, features, target):
+    feature_corrs = df.groupby('era').apply(
+            lambda era: era[features].corrwith(era[target])
+            )
+    gc.collect()
+    return feature_corrs
 
 def exposure_dissimilarity_per_era(df, prediction_col, example_col, feature_cols=None):
     if feature_cols is None:
@@ -265,8 +273,9 @@ class ResidualBlock(nn.Module):
     
 class Resnet(nn.Module):
     def __init__(self, lr, input_dims, in_featues, n_residual_blocks, \
-        output_features: list,kernel_sizes: list, paddings: list, \
-        strides: list, is_classifier=False, n_classes=None):
+        output_features: list, kernel_sizes: list, paddings: list, \
+        strides: list, is_classifier=False, is_regressor=False, 
+        n_classes=None):
         super(Resnet, self).__init__()
         output_features = deque(output_features).appendleft(in_featues)
         tower = [ResidualBlock(output_features[i], output_features[i+1], kernel_sizes[i], \
@@ -280,6 +289,12 @@ class Resnet(nn.Module):
                 nn.Flatten(start_dim=1),
                 nn.Linear(output_features[-1]*input_dims[-2]*input_dims[-1], n_classes)
             )
+        elif is_regressor:
+            self.fc = nn.Sequential(
+                nn.AdaptiveAvgPool2d((1, 1)),
+                nn.Flatten(start_dim=1),
+                nn.Linear(output_features[-1]*input_dims[-2]*input_dims[-1], 1)
+            )
 
         self.optimizer = optim.Adam(self.parameters(), lr=lr)
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
@@ -289,4 +304,8 @@ class Resnet(nn.Module):
         residual_output = self.residual_tower(input)
         if self.is_classifier:
             output = self.fc(residual_output)
+        elif self.is_regressor:
+            output = self.fc(residual_output)
         return output
+
+

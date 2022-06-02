@@ -5,8 +5,8 @@ import json
 
 
 class DataHandler:
-    def __init__(self, version='v4', feature_set='medium', 
-                 secondary_targets=None, every_fourth=True):
+    def __init__(self, version='v4', feature_set='medium', secondary_targets=None, 
+                 every_fourth=True, get_dataloader=False, batch_size=64):
         self.api = NumerAPI()
         self.current_round = self.api.get_current_round()
         self.version = version         
@@ -23,6 +23,17 @@ class DataHandler:
                                        columns=self.feature_set)
         self.target = f'target_nomi_{self.handler.version}_20'
         self.secondary_targets = secondary_targets
+        if get_dataloader:
+            train_dataset = Dataset(self.train_df, self.features, self.target)
+            validation_dataset = Dataset(self.validation_df, self.features, self.target)
+            live_dataset = Dataset(self.live_df, self.features, self.target)
+            self.train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True) 
+            self.validation_loader = DataLoader(validation_dataset, batch_size=batch_size) 
+            self.live_loader = DataLoader(live_dataset, batch_size=batch_size) 
+            del train_dataset
+            del validation_dataset
+            del live_dataset
+            gc.collect()
 
     def download_data(self):
         print('...Fetching Data...')
@@ -58,3 +69,38 @@ class DataHandler:
         every_fourth_era = training_data['era'].unique()[::4]
         df = df[df['era'].isin(every_fourth_era)]
         return df
+
+
+class NumeraiDataset:
+    def __init__(self, df, features, target):
+        self.df = df
+        self.features = features
+        self.target = target
+
+        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
+
+    def __len__(self):
+        return len(self.df)
+
+    def __getitem__(self, idx):
+        X = self.df.iloc[idx, self.features].values
+        y = self.df.iloc[idx, self.target].values
+        X = T.tensor(X, dtype=T.float32).to(self.device)
+        y = T.tensor(y, dtype=T.float32).to(self.device)
+        return X, y
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
