@@ -10,18 +10,21 @@ class DataHandler:
         self.api = NumerAPI()
         self.current_round = self.api.get_current_round()
         self.version = version         
-        self.download_data()
+        try:
+            self.download_data()
+        except:
+            print('Maximum number of tries reached. Using existing data if available.')
         self.features, self.extra_features = self.get_feature_set(feature_set)
-        self.train_df = pd.read_parquet(f'{version}/train.parquet', 
-                                        columns=self.feature_set)
+        self.train_df = pd.read_parquet('data_files/train.parquet', 
+                                        columns=self.features + self.extra_features)
         if every_fourth:
             self.train_df = self.pare_down(self.train_df)
 
-        self.validation_df = pd.read_parquet(f'{version}/validation.parquet', 
-                                             columns=self.feature_set)
-        self.live_df = pd.read_parquet(f'{version}/live_{self.current_round}.parquet', 
-                                       columns=self.feature_set)
-        self.target = f'target_nomi_{self.handler.version}_20'
+        self.validation_df = pd.read_parquet('data_files/validation.parquet', 
+                                             columns=self.features + self.extra_features)
+        self.live_df = pd.read_parquet(f'data_files/live_{self.current_round}.parquet', 
+                                       columns=self.features + self.extra_features)
+        self.target = f'target_nomi_{self.version}_20'
         self.secondary_targets = secondary_targets
         if get_dataloader:
             train_dataset = Dataset(self.train_df, self.features, self.target)
@@ -37,15 +40,16 @@ class DataHandler:
 
     def download_data(self):
         print('...Fetching Data...')
-        self.api.download_dataset(f'{self.version}/train.parquet')
-        self.api.download_dataset(f'{self.version}/validation.parquet')
+        self.api.download_dataset(f'{self.version}/train.parquet', 'data_files/train.parquet')
+        self.api.download_dataset(f'{self.version}/validation.parquet', 'data_files/validation.parquet')
         self.api.download_dataset(f'{self.version}/live.parquet', 
-                                  f'{self.version}/live_{self.current_round}.parquet')
-        self.api.download_dataset(f'{self.version}/validation_example_preds.parquet')
-        self.api.download_dataset(f'{self.version}/features.json')
+                                  f'data_files/live_{self.current_round}.parquet')
+        self.api.download_dataset(f'{self.version}/validation_example_preds.parquet', 
+                                   'data_files/validation_example_preds.parquet')
+        self.api.download_dataset(f'{self.version}/features.json', 'data_files/features.json')
 
     def get_feature_set(self, feature_set):
-        with open(f'{self.version}/features.json', 'r') as f:
+        with open('data_files/features.json', 'r') as f:
             feature_metadata = json.load(f)
         extra_features = ['era', 'data_type', f'target_nomi_{self.version}_20']
         if feature_set == 'all':
@@ -66,29 +70,35 @@ class DataHandler:
         return worst_n
 
     def pare_down(self, df):
-        every_fourth_era = training_data['era'].unique()[::4]
+        every_fourth_era = df['era'].unique()[::4]
         df = df[df['era'].isin(every_fourth_era)]
         return df
 
 
 class NumeraiDataset:
-    def __init__(self, df, features, target):
+    def __init__(self, df, features, target, lookback=32):
         self.df = df
-        self.features = features
+        self.features = features[:-1]
+        self.lookback = lookback
         self.target = target
 
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
 
     def __len__(self):
-        return len(self.df)
+        return len(self.df) - self.lookback
 
     def __getitem__(self, idx):
-        X = self.df.iloc[idx, self.features].values
-        y = self.df.iloc[idx, self.target].values
-        X = T.tensor(X, dtype=T.float32).to(self.device)
+        X = self.get_input(idx)
+        y = self.df.iloc[idx+self.lookback, self.target].values
         y = T.tensor(y, dtype=T.float32).to(self.device)
         return X, y
-        
+
+    def get_input(self, idx):
+        id, era = self.df.loc[idx+self.lookback, ['id', 'era']]
+        X = self.df.loc[idx:idx+self.lookback, self.features].values
+        X = T.tensor(X, dtype=T.float32).to(self.device)
+        return X.reshape(self.lookback, 34, 35)
+
 
 
 

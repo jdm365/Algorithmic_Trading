@@ -11,7 +11,7 @@ import torch.optim as optim
 from collections import deque
 
 def get_time_series_cross_val_splits(data, cv=3, embargo=12):
-    all_train_eras = data[ERA_COL].unique()
+    all_train_eras = data['era'].unique()
     len_split = len(all_train_eras) // cv
     test_splits = [all_train_eras[i * len_split:(i + 1) * len_split] for i in range(cv)]
     # fix the last test split to have all the last eras, in case the number of eras wasn't divisible by cv
@@ -148,13 +148,13 @@ def exposure_dissimilarity_per_era(df, prediction_col, example_col, feature_cols
     e = df.loc[:, feature_cols].corrwith(df[example_col])
     return (1 - (np.dot(u,e)/np.dot(e,e)))
 
-def validation_metrics(validation_data, pred_cols, example_col, fast_mode=False,
-                        target_col=TARGET_COL, features_for_neutralization=None):
+def validation_metrics(validation_data, pred_cols, example_col, fast_mode=False, 
+                       target_col=None, features_for_neutralization=None): 
     validation_stats = pd.DataFrame()
     feature_cols = [c for c in validation_data if c.startswith("feature_")]
     for pred_col in pred_cols:
         # Check the per-era correlations on the validation set (out of sample)
-        validation_correlations = validation_data.groupby(ERA_COL).apply(
+        validation_correlations = validation_data.groupby('era').apply(
             lambda d: unif(d[pred_col]).corr(d[target_col]))
 
         mean = validation_correlations.mean()
@@ -174,20 +174,14 @@ def validation_metrics(validation_data, pred_cols, example_col, fast_mode=False,
         payout_scores = validation_correlations.clip(-0.25, 0.25)
         payout_daily_value = (payout_scores + 1).cumprod()
 
-        apy = (
-                      (
-                              (payout_daily_value.dropna().iloc[-1])
-                              ** (1 / len(payout_scores))
-                      )
-                      ** 49  # 52 weeks of compounding minus 3 for stake compounding lag
-                      - 1
-              ) * 100
+        apy = (((payout_daily_value.dropna().iloc[-1]) ** (1 / len(payout_scores))) ** 49  # 52 weeks of compounding minus 3 for stake compounding lag
+              - 1) * 100
 
         validation_stats.loc["apy", pred_col] = apy
 
         if not fast_mode:
             # Check the feature exposure of your validation predictions
-            max_per_era = validation_data.groupby(ERA_COL).apply(
+            max_per_era = validation_data.groupby('era').apply(
                 lambda d: d[feature_cols].corrwith(d[pred_col]).abs().max())
             max_feature_exposure = max_per_era.mean()
             validation_stats.loc["max_feature_exposure", pred_col] = max_feature_exposure
@@ -198,7 +192,7 @@ def validation_metrics(validation_data, pred_cols, example_col, fast_mode=False,
             validation_stats.loc["feature_neutral_mean", pred_col] = feature_neutral_mean
 
             # Check TB200 feature neutral mean
-            tb200_feature_neutral_mean_era = validation_data.groupby(ERA_COL).apply(lambda df: \
+            tb200_feature_neutral_mean_era = validation_data.groupby('era').apply(lambda df: \
                                             get_feature_neutral_mean_tb_era(df, pred_col,
                                                                             target_col, 200,
                                                                             features_for_neutralization))
@@ -210,7 +204,7 @@ def validation_metrics(validation_data, pred_cols, example_col, fast_mode=False,
                 [pred_col],
                 target_col,
                 tb=200,
-                era_col=ERA_COL
+                era_col='era'
             )
 
             tb200_mean = tb200_validation_correlations.mean()[pred_col]
@@ -224,7 +218,7 @@ def validation_metrics(validation_data, pred_cols, example_col, fast_mode=False,
         # MMC over validation
         mmc_scores = []
         corr_scores = []
-        for _, x in validation_data.groupby(ERA_COL):
+        for _, x in validation_data.groupby('era'):
             series = neutralize_series(unif(x[pred_col]), (x[example_col]))
             mmc_scores.append(np.cov(series, x[target_col])[0, 1] / (0.29 ** 2))
             corr_scores.append(unif(x[pred_col]).corr(x[target_col]))
@@ -238,12 +232,12 @@ def validation_metrics(validation_data, pred_cols, example_col, fast_mode=False,
         validation_stats.loc["corr_plus_mmc_sharpe", pred_col] = corr_plus_mmc_sharpe
 
         # Check correlation with example predictions
-        per_era_corrs = validation_data.groupby(ERA_COL).apply(lambda d: unif(d[pred_col]).corr(unif(d[example_col])))
+        per_era_corrs = validation_data.groupby('era').apply(lambda d: unif(d[pred_col]).corr(unif(d[example_col])))
         corr_with_example_preds = per_era_corrs.mean()
         validation_stats.loc["corr_with_example_preds", pred_col] = corr_with_example_preds
 
         #Check exposure dissimilarity per era
-        tdf = validation_data.groupby(ERA_COL).apply(lambda df: \
+        tdf = validation_data.groupby('era').apply(lambda df: \
                                                 exposure_dissimilarity_per_era(df, pred_col,
                                                 example_col, feature_cols))
         validation_stats.loc["exposure_dissimilarity_mean", pred_col] = tdf.mean()

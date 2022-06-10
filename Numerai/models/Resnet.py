@@ -4,20 +4,19 @@ import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from Numerai.data_handling import DataHandler
+import sys
+sys.path.append('../')
+from data_handling import DataHandler
 import gc
 from utils import validation_metrics, neutralize, get_corrs, Resnet
 
 
 class BasicResnet(nn.Module):
-    def __init__(self, lr, input_dims, in_features, n_residual_blocks,
-                 output_features, kernel_sizes, paddings, strides, 
-                 feature_set='all', n=50, batch_size=64, 
-                 model_file='Resnet.pt'):
+    def __init__(self, lr, feature_set='all', n=50, batch_size=64, model_file='Resnet.pt'):
         super(BasicResnet, self).__init__()
         self.handler = DataHandler(
                 feature_set=feature_set,
-                secondary_targets=secondary_targets
+                secondary_targets=secondary_targets,
                 get_dataloader=True,
                 batch_size=batch_size
                 )
@@ -30,13 +29,13 @@ class BasicResnet(nn.Module):
         self.n = n
         self.model = Resnet(
                 lr=lr,
-                input_dims=input_dims,
-                in_features=in_features,
-                n_residual_blocks=n_residual_blocks,
-                output_features=output_features,
-                kernel_sizes=kernel_sizes,
-                paddings=paddings,
-                strides=strides,
+                input_dims=[34, 35],
+                in_features=32,
+                n_residual_blocks=5,
+                output_features=1,
+                kernel_sizes=[7, 5, 3, 3, 1],
+                paddings=[3, 2, 1, 1, 0],
+                strides=[1, 1, 1, 1, 1],
                 is_regressor=True
                 )
 
@@ -65,17 +64,19 @@ class BasicResnet(nn.Module):
             if save_model:
                 T.save(self.model.state_dict(), f'trained_models/{self.model_file}')
         progress_bar.close()
+        return self.model
         
 
-    def validate(self, model=None, save_predictions=True)
+    def validate(self, model=None, save_predictions=True):
         if model is None:
             model = self.model.load_state_dict(T.load(f'trained_models/{self.model_file}'))
         preds = []
         with T.no_grad():
             for idx, (X, _) in enumerate(tqdm(self.handler.validation_loader, 
-                                         desc='Making Validation Predictions'):
+                                         desc='Making Validation Predictions')):
                 out = model.forward(X).detach().cpu().numpy().tolist()
                 preds += out
+
         self.handler.validation_df.loc[:, f'preds_{self.model_file}'] = preds 
         self.handler.validation_df[f'preds_{self.model_file}_neutral_riskiest_{n}'] = neutralize(
                 df=self.handler.validation_df,
@@ -88,7 +89,7 @@ class BasicResnet(nn.Module):
         self.handler.validation_df['prediction'] = self.handler.validation_df[
                 f'preds_{self.model_file}_neutral_riskiest_{n}'
                 ].rank(pct=True)
-        validation_sample_preds = pd.read_parquet(f'{self.handler.version}/
+        validation_sample_preds = pd.read_parquet(f'{self.handler.version}/\
                 validation_example_preds.parquet')
         validation_sample_preds['example_preds'] = self.handler.validation_df['predictions']
         validation_stats = validation_metrics(
@@ -105,15 +106,12 @@ class BasicResnet(nn.Module):
                 f'../predictions/validation_predictions_{self.handler.current_round}.csv'
                 )
 
-    def make_predictions(self, model=None, save_predicitions=True)
+    def make_predictions(self, model=None, save_predicitions=True):
         nans_per_col = self.handler.live_df[self.handler.live_df['data_type']\
                         == 'live'][self.handler.features].isna().sum()
         if nans_per_col.any():
             self.handler.live_df.loc[:, self.handler.features] = \
                          self.handler.live_df.loc[:, self.handler.features].fillna(0.5)
-        assert set(model.booster_.feature_name()) == set(self.handler.features), 
-               'There are new features available. Retrain this model before making any 
-                further submissions.' 
 
         if model is None:
             model = self.model.load_state_dict(T.load(f'trained_models/{self.model_file}'))
@@ -121,7 +119,7 @@ class BasicResnet(nn.Module):
         preds = []
         with T.no_grad():
             for idx, (X, _) in enumerate(tqdm(self.handler.validation_loader, 
-                                         desc='Making Live Predictions'):
+                                         desc='Making Live Predictions')):
                 out = model.forward(X).detach().cpu().numpy().tolist()
                 preds += out
 
