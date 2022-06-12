@@ -1,12 +1,13 @@
 import pandas as pd
 from numerapi import NumerAPI
 import os
+import gc
 import json
 
 
 class DataHandler:
-    def __init__(self, version='v4', feature_set='medium', secondary_targets=None, 
-                 every_fourth=True, get_dataloader=False, batch_size=64):
+    def __init__(self, version='v4', feature_set='medium', secondary_targets=False, 
+                 every_fourth=True, dataloader=None, batch_size=64):
         self.api = NumerAPI()
         self.current_round = self.api.get_current_round()
         self.version = version         
@@ -14,7 +15,10 @@ class DataHandler:
             self.download_data()
         except:
             print('Maximum number of tries reached. Using existing data if available.')
-        self.features, self.extra_features = self.get_feature_set(feature_set)
+        self.secondary_targets = secondary_targets
+        self.features, self.extra_features= self.get_feature_set(
+                feature_set
+                )
         self.train_df = pd.read_parquet('data_files/train.parquet', 
                                         columns=self.features + self.extra_features)
         if every_fourth:
@@ -24,24 +28,15 @@ class DataHandler:
                                              columns=self.features + self.extra_features)
         self.live_df = pd.read_parquet(f'data_files/live_{self.current_round}.parquet', 
                                        columns=self.features + self.extra_features)
+        self.secondary_targets = self.get_secondary_targets()
         self.target = f'target_nomi_{self.version}_20'
-        self.secondary_targets = secondary_targets
-        if get_dataloader:
-            train_dataset = Dataset(self.train_df, self.features, self.target)
-            validation_dataset = Dataset(self.validation_df, self.features, self.target)
-            live_dataset = Dataset(self.live_df, self.features, self.target)
-            self.train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True) 
-            self.validation_loader = DataLoader(validation_dataset, batch_size=batch_size) 
-            self.live_loader = DataLoader(live_dataset, batch_size=batch_size) 
-            del train_dataset
-            del validation_dataset
-            del live_dataset
-            gc.collect()
+
 
     def download_data(self):
         print('...Fetching Data...')
         self.api.download_dataset(f'{self.version}/train.parquet', 'data_files/train.parquet')
-        self.api.download_dataset(f'{self.version}/validation.parquet', 'data_files/validation.parquet')
+        self.api.download_dataset(f'{self.version}/validation.parquet',
+                                   'data_files/validation.parquet')
         self.api.download_dataset(f'{self.version}/live.parquet', 
                                   f'data_files/live_{self.current_round}.parquet')
         self.api.download_dataset(f'{self.version}/validation_example_preds.parquet', 
@@ -54,10 +49,24 @@ class DataHandler:
         extra_features = ['era', 'data_type', f'target_nomi_{self.version}_20']
         if feature_set == 'all':
             return (list(feature_metadata['features_stats'].keys()), extra_features)
-        return (feature_metadata['feature_sets'][feature_set], extra_features) 
+        return feature_metadata['feature_sets'][feature_set], extra_features
 
+    def get_secondary_targets(self):
+        extra_targets = [col for col in self.train_df if col.startswith("target_")]
+        extra_targets.remove(f'target_nomi_{self.version}_20')
+        return extra_targets 
 
-    def get_n_most_corr(self, corrs, n):
+    def get_corrs(self, df, target):
+        feature_corrs = df.groupby('era').apply(
+                lambda era: era[self.features]\
+                            .corrwith(era[target])
+                )
+        gc.collect()
+        return feature_corrs
+
+    def get_n_most_corr(self, corrs=None, df=None, n=None, target=None):
+        if corrs is None:
+            corrs = self.get_corrs(df, target)
         all_eras = corrs.index.sort_values()
         h1_eras = all_eras[:len(all_eras) // 2]
         h2_eras = all_eras[len(all_eras) // 2:]
@@ -73,44 +82,3 @@ class DataHandler:
         every_fourth_era = df['era'].unique()[::4]
         df = df[df['era'].isin(every_fourth_era)]
         return df
-
-
-class NumeraiDataset:
-    def __init__(self, df, features, target, lookback=32):
-        self.df = df
-        self.features = features[:-1]
-        self.lookback = lookback
-        self.target = target
-
-        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
-
-    def __len__(self):
-        return len(self.df) - self.lookback
-
-    def __getitem__(self, idx):
-        X = self.get_input(idx)
-        y = self.df.iloc[idx+self.lookback, self.target].values
-        y = T.tensor(y, dtype=T.float32).to(self.device)
-        return X, y
-
-    def get_input(self, idx):
-        id, era = self.df.loc[idx+self.lookback, ['id', 'era']]
-        X = self.df.loc[idx:idx+self.lookback, self.features].values
-        X = T.tensor(X, dtype=T.float32).to(self.device)
-        return X.reshape(self.lookback, 34, 35)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
